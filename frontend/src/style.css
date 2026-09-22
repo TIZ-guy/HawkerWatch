@@ -1,0 +1,35 @@
+:root {
+  --hw-cream: #fff9f2;
+  --hw-red: #d94a3a;
+  --hw-orange: #f39c4a;
+  --hw-ink: #252525;
+}
+
+body {
+  background: var(--hw-cream);
+  color: var(--hw-ink);
+}
+
+.navbar-brand,
+.nav-link,
+.btn,
+.form-control {
+  border-radius: 0.5rem;
+}
+
+.nav-link.router-link-active {
+  color: var(--hw-red) !important;
+  font-weight: 600;
+}
+
+.eyebrow {
+  color: var(--hw-red);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accent-card {
+  background: #fff1df;
+}

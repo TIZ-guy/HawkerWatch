@@ -1,0 +1,21 @@
+{
+  "name": "hawker-watch-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "test": "node --test",
+    "seed": "node scripts/seedMockData.js",
+    "import:closures": "node scripts/importHawkerClosures.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "mongoose": "^8.19.1",
+    "morgan": "^1.10.1"
+  }
+}
