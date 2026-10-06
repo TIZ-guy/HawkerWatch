@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
+import { notFound, errorHandler } from './middleware/errorMiddleware.js'
 
 const app = express()
 
@@ -14,8 +15,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { service: 'HawkerWatch API', status: 'ok' } })
 })
 
-app.use((_req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' })
-})
+app.use(notFound)
+app.use(errorHandler)
 
 export default app
