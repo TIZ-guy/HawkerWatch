@@ -1,5 +1,4 @@
 // backend/controllers/favouriteController.js
-// Uses Shane's Favourite model (targetType + target + alert).
 // Errors are passed to next(err) so the team's errorMiddleware formats them:
 //   bad id         -> 400
 //   validation     -> 400  (e.g. alert time not HH:mm)
@@ -41,8 +40,13 @@ export async function addFavourite(req, res, next) {
       })
     }
 
-    // Make sure the stall / hawker centre actually exists
-    const exists = await TargetModel.exists({ _id: target })
+    if (!target) {
+      return res.status(400).json({ success: false, message: 'target is required' })
+    }
+
+    // Make sure the stall / hawker centre actually exists (and the stall is still active)
+    const query = targetType === 'Stall' ? { _id: target, isActive: true } : { _id: target }
+    const exists = await TargetModel.exists(query)
     if (!exists) {
       return res.status(404).json({ success: false, message: `${targetType} not found` })
     }
@@ -60,9 +64,15 @@ export async function updateAlert(req, res, next) {
   try {
     const { enabled, days, time } = req.body
 
+    // Only change the fields that were sent, so e.g. turning the alert off keeps the saved days/time
+    const changes = {}
+    if (enabled !== undefined) changes['alert.enabled'] = enabled
+    if (days !== undefined) changes['alert.days'] = days
+    if (time !== undefined) changes['alert.time'] = time
+
     const favourite = await Favourite.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id }, // only your own favourites
-      { alert: { enabled, days, time } },
+      { $set: changes },
       { new: true, runValidators: true } // return updated doc + check Shane's rules
     )
 
