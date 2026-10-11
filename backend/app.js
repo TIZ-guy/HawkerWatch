@@ -3,6 +3,8 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import { notFound, errorHandler } from './middleware/errorMiddleware.js'
+import hawkerCentreRoutes from './routes/hawkerCentreRoutes.js'
+import stallRoutes from './routes/stallRoutes.js'
 
 const app = express()
 
@@ -14,6 +16,9 @@ app.use(morgan('dev'))
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { service: 'HawkerWatch API', status: 'ok' } })
 })
+
+app.use('/api/hawker-centres', hawkerCentreRoutes)
+app.use('/api/stalls', stallRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
