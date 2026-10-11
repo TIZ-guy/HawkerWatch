@@ -8,6 +8,7 @@ import { notFound, errorHandler } from './middleware/errorMiddleware.js'
 import hawkerCentreRoutes from './routes/hawkerCentreRoutes.js'
 import stallRoutes from './routes/stallRoutes.js'
 import favouriteRoutes from './routes/favouriteRoutes.js'
+import reportRoutes from './routes/reportRoutes.js'
 
 const app = express()
 
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/hawker-centres', hawkerCentreRoutes)
 app.use('/api/stalls', stallRoutes)
 app.use('/api/favourites', favouriteRoutes)
+app.use('/api/reports', reportRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
