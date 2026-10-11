@@ -12,6 +12,10 @@ import reportRoutes from './routes/reportRoutes.js'
 
 const app = express()
 
+// Render/Railway put a proxy in front of the API. Trusting it lets req.ip be the user's real IP,
+// so the login and report rate limits count each user separately instead of everyone together.
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)
+
 app.use(helmet())
 // credentials: true lets the browser send the login cookie with requests from the frontend.
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }))

@@ -96,11 +96,11 @@ frontend/src/
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/health` | |
-| POST | `/api/auth/register` | `{ name, email, password }`; sets the login cookie |
-| POST | `/api/auth/login` | `{ email, password }`; sets the login cookie |
+| POST | `/api/auth/register` | `{ name, email, password }`; password needs 8 to 72 characters, a capital letter and a special character; sets the login cookie |
+| POST | `/api/auth/login` | `{ email, password }`; sets the login cookie. After 10 failed attempts from one IP in 15 minutes, returns 429 until the window ends |
 | GET | `/api/auth/me` | Current user; 401 when logged out |
 | PATCH | `/api/auth/me` | `{ name }`; login required |
-| PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required |
+| PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required; same rules as register for the new password |
 | POST | `/api/auth/logout` | Clears the login cookie |
 | GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first |
 | GET | `/api/hawker-centres/:id` | Includes official `closures` |
@@ -113,6 +113,9 @@ frontend/src/
 | POST | `/api/favourites` | `{ targetType: 'Stall' or 'HawkerCentre', target }`; 409 if already saved |
 | PATCH | `/api/favourites/:id/alert` | `{ enabled, days: [0-6, 0 = Sunday], time: 'HH:mm' }` |
 | DELETE | `/api/favourites/:id` | Removes one of the user's favourites |
+| GET | `/api/reports` | `stallId` or `hawkerCentreId`; live community reports |
+| POST | `/api/reports` | `{ stallId, status }`; login required; rate limited |
+| POST | `/api/reports/:id/flag` | Login required; flags a report |
 
 All responses use `{ success: true, data: ... }` or `{ success: false, message: ... }`. Community reports expire 60 minutes after they are made; only live (unexpired) reports are returned.
 

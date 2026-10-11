@@ -1,11 +1,10 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore.js'
-
-// Matches the backend's limits in authController.js
-const MIN_PASSWORD_LENGTH = 8
-const MAX_PASSWORD_LENGTH = 72
+import PasswordInput from '../components/PasswordInput.vue'
+import PasswordChecklist from '../components/PasswordChecklist.vue'
+import { meetsPasswordRules } from '../utils/passwordRules.js'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -15,11 +14,13 @@ const form = reactive({ name: '', email: '', password: '', confirmPassword: '' }
 const error = ref('')
 const submitting = ref(false)
 
+// An old error is out of date as soon as the user changes something
+watch(form, () => { error.value = '' })
+
 // Checked in the browser for quick feedback; the backend checks again.
 const problem = computed(() => {
   if (!form.name || !form.email || !form.password) return 'Please fill in every field.'
-  if (form.password.length < MIN_PASSWORD_LENGTH) return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-  if (form.password.length > MAX_PASSWORD_LENGTH) return `Password must be at most ${MAX_PASSWORD_LENGTH} characters.`
+  if (!meetsPasswordRules(form.password)) return 'Your password needs everything in the checklist below it.'
   if (form.password !== form.confirmPassword) return 'Passwords do not match.'
   return ''
 })
@@ -65,15 +66,14 @@ async function submit() {
 
             <div class="mb-3">
               <label for="register-password" class="form-label fw-semibold">Password</label>
-              <input id="register-password" v-model="form.password" type="password" class="form-control"
-                autocomplete="new-password" aria-describedby="register-password-help" required />
-              <div id="register-password-help" class="form-text">At least {{ MIN_PASSWORD_LENGTH }} characters.</div>
+              <PasswordInput id="register-password" v-model="form.password"
+                autocomplete="new-password" aria-describedby="register-password-rules" required />
+              <PasswordChecklist id="register-password-rules" :password="form.password" />
             </div>
 
             <div class="mb-4">
               <label for="register-confirm" class="form-label fw-semibold">Confirm password</label>
-              <input id="register-confirm" v-model="form.confirmPassword" type="password" class="form-control"
-                autocomplete="new-password" required />
+              <PasswordInput id="register-confirm" v-model="form.confirmPassword" autocomplete="new-password" required />
             </div>
 
             <button type="submit" class="btn btn-danger w-100" :disabled="submitting">

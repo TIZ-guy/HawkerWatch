@@ -1,14 +1,15 @@
 <script setup>
 // Account details, name and password changes, and favourite reminders (logged-in users only).
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FavouriteAlertEditor from '../components/FavouriteAlertEditor.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
+import PasswordInput from '../components/PasswordInput.vue'
+import PasswordChecklist from '../components/PasswordChecklist.vue'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useFavouriteStore } from '../stores/useFavouriteStore.js'
-
-const MIN_PASSWORD_LENGTH = 8
+import { meetsPasswordRules } from '../utils/passwordRules.js'
 
 const auth = useAuthStore()
 const favourites = useFavouriteStore()
@@ -51,11 +52,14 @@ const savingPassword = ref(false)
 const passwordMessage = ref('')
 const passwordError = ref('')
 
+// An old error is out of date as soon as the user changes a password field
+watch([currentPassword, newPassword, confirmPassword], () => { passwordError.value = '' })
+
 async function savePassword() {
   passwordMessage.value = ''
   passwordError.value = ''
-  if (newPassword.value.length < MIN_PASSWORD_LENGTH) {
-    passwordError.value = `Your new password needs at least ${MIN_PASSWORD_LENGTH} characters.`
+  if (!meetsPasswordRules(newPassword.value)) {
+    passwordError.value = 'Your new password needs everything in the checklist.'
     return
   }
   if (newPassword.value !== confirmPassword.value) {
@@ -132,16 +136,17 @@ onMounted(async () => {
             <h2 id="password-heading" class="h5 mb-0">Change password</h2>
             <div>
               <label for="current-password" class="form-label">Current password</label>
-              <input id="current-password" v-model="currentPassword" type="password" class="form-control" autocomplete="current-password" required />
+              <PasswordInput id="current-password" v-model="currentPassword" autocomplete="current-password" required />
             </div>
             <div>
               <label for="new-password" class="form-label">New password</label>
-              <input id="new-password" v-model="newPassword" type="password" class="form-control" autocomplete="new-password" required />
-              <div class="form-text">At least {{ MIN_PASSWORD_LENGTH }} characters.</div>
+              <PasswordInput id="new-password" v-model="newPassword" autocomplete="new-password"
+                aria-describedby="new-password-rules" required />
+              <PasswordChecklist id="new-password-rules" :password="newPassword" />
             </div>
             <div>
               <label for="confirm-password" class="form-label">Confirm new password</label>
-              <input id="confirm-password" v-model="confirmPassword" type="password" class="form-control" autocomplete="new-password" required />
+              <PasswordInput id="confirm-password" v-model="confirmPassword" autocomplete="new-password" required />
             </div>
             <div class="d-flex flex-wrap align-items-center gap-3">
               <button type="submit" class="btn btn-danger" :disabled="savingPassword">

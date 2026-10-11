@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore.js'
+import PasswordInput from '../components/PasswordInput.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -51,8 +52,7 @@ async function submit() {
 
             <div class="mb-4">
               <label for="login-password" class="form-label fw-semibold">Password</label>
-              <input id="login-password" v-model="form.password" type="password" class="form-control"
-                autocomplete="current-password" required />
+              <PasswordInput id="login-password" v-model="form.password" autocomplete="current-password" required />
             </div>
 
             <button type="submit" class="btn btn-danger w-100" :disabled="submitting">

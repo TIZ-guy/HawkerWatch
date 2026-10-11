@@ -1,11 +1,9 @@
 import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import { AUTH_COOKIE, signToken, cookieOptions, cookieMaxAge } from '../utils/authToken.js'
+import { passwordProblem } from '../utils/passwordRules.js'
 
 const SALT_ROUNDS = 10
-const MIN_PASSWORD_LENGTH = 8
-// bcrypt ignores everything after 72 bytes, so longer passwords would give a false sense of security.
-const MAX_PASSWORD_LENGTH = 72
 
 const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode })
 
@@ -24,9 +22,8 @@ export async function register(req, res) {
   if (!isText(name) || !isText(email) || !isText(password)) {
     throw httpError(400, 'Name, email and password are required')
   }
-  if (password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
-    throw httpError(400, `Password must be ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters`)
-  }
+  const problem = passwordProblem(password)
+  if (problem) throw httpError(400, problem)
   if (await User.exists({ email: email.trim().toLowerCase() })) {
     throw httpError(409, 'An account with this email already exists')
   }
@@ -83,9 +80,8 @@ export async function changePassword(req, res) {
   if (!isText(currentPassword) || !isText(newPassword)) {
     throw httpError(400, 'Current and new password are required')
   }
-  if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH) {
-    throw httpError(400, `New password must be ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters`)
-  }
+  const problem = passwordProblem(newPassword)
+  if (problem) throw httpError(400, `New ${problem.charAt(0).toLowerCase()}${problem.slice(1)}`)
 
   const user = await User.findById(req.user._id).select('+passwordHash')
   const passwordMatches = user && (await bcrypt.compare(currentPassword, user.passwordHash).catch(() => false))

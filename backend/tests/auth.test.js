@@ -46,9 +46,14 @@ test('register rejects passwords shorter than 8 characters', async () => {
   await rejectsWith(register({ body: { name: 'A', email: 'a@example.com', password: 'short' } }, fakeRes()), 400)
 })
 
+test('register rejects passwords without a capital letter or special character', async () => {
+  await rejectsWith(register({ body: { name: 'A', email: 'a@example.com', password: 'password123!' } }, fakeRes()), 400)
+  await rejectsWith(register({ body: { name: 'A', email: 'a@example.com', password: 'Password123' } }, fakeRes()), 400)
+})
+
 test('register rejects an email that already has an account', async (t) => {
   t.mock.method(User, 'exists', async () => ({ _id: 'existing' }))
-  await rejectsWith(register({ body: { name: 'A', email: 'a@example.com', password: 'password123' } }, fakeRes()), 409)
+  await rejectsWith(register({ body: { name: 'A', email: 'a@example.com', password: 'Password123!' } }, fakeRes()), 409)
 })
 
 test('register hashes the password, ignores role and logs the user in', async (t) => {
@@ -57,11 +62,11 @@ test('register hashes the password, ignores role and logs the user in', async (t
   t.mock.method(User, 'create', async (fields) => { saved = fields; return new User(fields) })
 
   const res = fakeRes()
-  await register({ body: { name: 'A', email: 'a@example.com', password: 'password123', role: 'admin' } }, res)
+  await register({ body: { name: 'A', email: 'a@example.com', password: 'Password123!', role: 'admin' } }, res)
 
   assert.equal(saved.role, undefined)
-  assert.notEqual(saved.passwordHash, 'password123')
-  assert.ok(await bcrypt.compare('password123', saved.passwordHash))
+  assert.notEqual(saved.passwordHash, 'Password123!')
+  assert.ok(await bcrypt.compare('Password123!', saved.passwordHash))
   // Serialise like Express does, which is when the User model strips passwordHash.
   const sent = JSON.parse(JSON.stringify(res.body))
   assert.equal(res.statusCode, 201)
@@ -144,11 +149,17 @@ test('changePassword rejects a new password shorter than 8 characters', async ()
   await rejectsWith(changePassword(req, fakeRes()), 400)
 })
 
+test('changePassword rejects a new password without a special character', async () => {
+  const req = { user: demoUser(), body: { currentPassword: 'password123', newPassword: 'Password456' } }
+  await assert.rejects(changePassword(req, fakeRes()), (err) =>
+    err.statusCode === 400 && err.message === 'New password needs a special character')
+})
+
 test('changePassword rejects a wrong current password', async (t) => {
   const user = demoUser()
   user.passwordHash = await bcrypt.hash('password123', 4)
   mockFindById(t, user)
-  const req = { user, body: { currentPassword: 'wrong-password', newPassword: 'password456' } }
+  const req = { user, body: { currentPassword: 'wrong-password', newPassword: 'Password456!' } }
   await rejectsWith(changePassword(req, fakeRes()), 400)
 })
 
@@ -159,11 +170,11 @@ test('changePassword stores a hash of the new password', async (t) => {
   t.mock.method(user, 'save', async () => user)
 
   const res = fakeRes()
-  await changePassword({ user, body: { currentPassword: 'password123', newPassword: 'password456' } }, res)
+  await changePassword({ user, body: { currentPassword: 'password123', newPassword: 'Password456!' } }, res)
 
   assert.equal(res.body.success, true)
   assert.equal(user.save.mock.callCount(), 1)
-  assert.ok(await bcrypt.compare('password456', user.passwordHash))
+  assert.ok(await bcrypt.compare('Password456!', user.passwordHash))
 })
 
 test('logout clears the auth cookie', () => {
