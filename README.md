@@ -93,6 +93,8 @@ frontend/src/
 
 ## API endpoints
 
+With `npm run dev` running, open **http://localhost:5173/api/docs** for an interactive list of every endpoint (Swagger UI), including request examples, possible responses, a **Try it out** button, and the outside services HawkerWatch uses. The raw OpenAPI description is at `/api/docs.json`. It lives in `backend/docs/openapi.js`; `npm test` fails if a route is added without documenting it there.
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/health` | |
