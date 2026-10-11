@@ -126,15 +126,50 @@ test('updateMe requires a name', async () => {
 
 test('updateMe saves the new name and ignores other fields', async (t) => {
   const user = demoUser()
+  t.mock.method(User, 'exists', async () => null)
   t.mock.method(user, 'save', async () => user)
 
   const res = fakeRes()
-  await updateMe({ user, body: { name: 'Kia Heng', email: 'new@example.com', role: 'admin' } }, res)
+  await updateMe({ user, body: { name: '  Kia   Heng ', email: 'new@example.com', role: 'admin' } }, res)
 
   assert.equal(user.save.mock.callCount(), 1)
-  assert.equal(res.body.data.user.name, 'Kia Heng')
+  assert.equal(res.body.data.user.name, 'Kia Heng') // extra spaces tidied
   assert.equal(user.email, 'kia@example.com')
   assert.equal(user.role, 'user')
+})
+
+test('updateMe rejects a name another user has, but not your own', async (t) => {
+  const user = demoUser()
+  let filter
+  t.mock.method(User, 'exists', async (query) => { filter = query; return { _id: 'someone-else' } })
+  await rejectsWith(updateMe({ user, body: { name: 'Zachary' } }, fakeRes()), 409)
+  // The lookup skips the user's own account, so changing your own name's capitals is allowed
+  assert.deepEqual(filter._id, { $ne: user._id })
+})
+
+// Runs the name lookup the way MongoDB would, against a list of existing names.
+const mockExistingNames = (t, names) =>
+  t.mock.method(User, 'exists', async (query) => {
+    if (!query.name) return null // the email check
+    const pattern = new RegExp(query.name.$regex, query.name.$options)
+    return names.some((name) => pattern.test(name)) ? { _id: 'existing' } : null
+  })
+
+test('register rejects a name that is taken, ignoring capitals and extra spaces', async (t) => {
+  mockExistingNames(t, ['Zachary Tay'])
+  for (const name of ['Zachary Tay', 'zachary tay', '  ZACHARY   tay ']) {
+    await rejectsWith(register({ body: { name, email: 'z@example.com', password: 'Password123!' } }, fakeRes()), 409)
+  }
+})
+
+test('register allows names that only look similar', async (t) => {
+  mockExistingNames(t, ['Zachary Tay'])
+  t.mock.method(User, 'create', async (fields) => new User(fields))
+  for (const name of ['Zachary', 'Zachary Tay 2', 'Zachary.Tay']) {
+    const res = fakeRes()
+    await register({ body: { name, email: 'z@example.com', password: 'Password123!' } }, res)
+    assert.equal(res.statusCode, 201, name)
+  }
 })
 
 // User.findById(...).select(...) is a chained query, so the mock returns an object with select().

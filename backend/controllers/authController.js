@@ -10,6 +10,18 @@ const httpError = (statusCode, message) => Object.assign(new Error(message), { s
 // Rejects non-strings so a body like { "email": { "$ne": null } } can't be used as a MongoDB query.
 const isText = (value) => typeof value === 'string' && value.trim() !== ''
 
+// "  Zachary   Tay " -> "Zachary Tay", so extra spaces can't be used to copy someone's name.
+const tidyName = (name) => name.trim().replace(/\s+/g, ' ')
+
+// Display names are unique, ignoring capitals: "zachary tay" counts as taken by "Zachary Tay".
+// exceptUserId lets a user keep their own name when changing its capitals.
+function nameTaken(name, exceptUserId) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const filter = { name: { $regex: `^${escaped}$`, $options: 'i' } }
+  if (exceptUserId) filter._id = { $ne: exceptUserId }
+  return User.exists(filter)
+}
+
 function sendLoggedIn(res, statusCode, user) {
   res.cookie(AUTH_COOKIE, signToken(user), { ...cookieOptions(), maxAge: cookieMaxAge })
   res.status(statusCode).json({ success: true, data: { user } })
@@ -27,10 +39,13 @@ export async function register(req, res) {
   if (await User.exists({ email: email.trim().toLowerCase() })) {
     throw httpError(409, 'An account with this email already exists')
   }
+  if (await nameTaken(tidyName(name))) {
+    throw httpError(409, 'That name is already taken, please choose another')
+  }
 
   // role is never taken from the request, so nobody can sign themselves up as an admin.
   const user = await User.create({
-    name,
+    name: tidyName(name),
     email,
     passwordHash: await bcrypt.hash(password, SALT_ROUNDS)
   })
@@ -66,8 +81,11 @@ export function me(req, res) {
 export async function updateMe(req, res) {
   const { name } = req.body || {}
   if (!isText(name)) throw httpError(400, 'Name is required')
+  if (await nameTaken(tidyName(name), req.user._id)) {
+    throw httpError(409, 'That name is already taken, please choose another')
+  }
 
-  req.user.name = name
+  req.user.name = tidyName(name)
   await req.user.save() // runs the User schema rules, e.g. the 60-character limit
 
   res.json({ success: true, data: { user: req.user } })

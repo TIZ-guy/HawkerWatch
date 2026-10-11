@@ -52,8 +52,14 @@ const directionsUrl = computed(() => {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
 })
 
-async function loadSummary(id) {
-  summary.value = null
+// After someone reports a stall, show it as that stall's latest update and recount the summary.
+function onStallReported(stallId, report) {
+  stalls.value = stalls.value.map((stall) => (stall._id === stallId ? { ...stall, liveReport: report } : stall))
+  loadSummary(route.params.id, { keepCurrent: true })
+}
+
+async function loadSummary(id, { keepCurrent = false } = {}) {
+  if (!keepCurrent) summary.value = null // keepCurrent avoids flashing "Loading" on a refresh
   summaryError.value = ''
   try {
     const result = await getCommunitySummary(id)
@@ -167,7 +173,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               class="col-md-6 col-xl-4"
               :class="{ 'stall-highlight': stall._id === highlightedStallId }"
             >
-              <StallCard :stall="stall" />
+              <StallCard :stall="stall" @reported="(report) => onStallReported(stall._id, report)" />
             </div>
           </div>
           <div v-else class="alert alert-light border">No stalls match your search.</div>
