@@ -8,4 +8,10 @@ export const login = ({ email, password }) =>
 
 export const getCurrentUser = () => apiRequest('/auth/me').then((data) => data.user)
 
-export const logout = () => apiRequest('/auth/logout', { method: 'POST' })
+export const updateMe = ({ name }) =>
+  apiRequest('/auth/me', { method: 'PATCH', body: { name } }).then((data) => data.user)
+
+export const changePassword = ({ currentPassword, newPassword }) =>
+  apiRequest('/auth/password', { method: 'PATCH', body: { currentPassword, newPassword } })
+
+export const logout =() => apiRequest('/auth/logout', { method: 'POST' })

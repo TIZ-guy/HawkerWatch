@@ -64,6 +64,40 @@ export function me(req, res) {
   res.json({ success: true, data: { user: req.user } })
 }
 
+// PATCH /api/auth/me  { name }  (needs protect)
+// Only the name can be changed here. Email and role stay as they are.
+export async function updateMe(req, res) {
+  const { name } = req.body || {}
+  if (!isText(name)) throw httpError(400, 'Name is required')
+
+  req.user.name = name
+  await req.user.save() // runs the User schema rules, e.g. the 60-character limit
+
+  res.json({ success: true, data: { user: req.user } })
+}
+
+// PATCH /api/auth/password  { currentPassword, newPassword }  (needs protect)
+export async function changePassword(req, res) {
+  const { currentPassword, newPassword } = req.body || {}
+
+  if (!isText(currentPassword) || !isText(newPassword)) {
+    throw httpError(400, 'Current and new password are required')
+  }
+  if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH) {
+    throw httpError(400, `New password must be ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters`)
+  }
+
+  const user = await User.findById(req.user._id).select('+passwordHash')
+  const passwordMatches = user && (await bcrypt.compare(currentPassword, user.passwordHash).catch(() => false))
+  // 400 rather than 401, so the frontend doesn't mistake a typo for an expired login.
+  if (!passwordMatches) throw httpError(400, 'Current password is incorrect')
+
+  user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+  await user.save()
+
+  res.json({ success: true, data: {} })
+}
+
 // POST /api/auth/logout
 export function logout(_req, res) {
   res.clearCookie(AUTH_COOKIE, cookieOptions())

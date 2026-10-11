@@ -3,7 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
-import { register, login, me, logout } from '../controllers/authController.js'
+import { register, login, me, updateMe, changePassword, logout } from '../controllers/authController.js'
 import { protect, requireRole } from '../middleware/authMiddleware.js'
 import { AUTH_COOKIE, signToken, verifyToken } from '../utils/authToken.js'
 
@@ -113,6 +113,57 @@ test('me returns the logged-in user', () => {
   const res = fakeRes()
   me({ user }, res)
   assert.equal(res.body.data.user, user)
+})
+
+test('updateMe requires a name', async () => {
+  await rejectsWith(updateMe({ user: demoUser(), body: { name: '  ' } }, fakeRes()), 400)
+})
+
+test('updateMe saves the new name and ignores other fields', async (t) => {
+  const user = demoUser()
+  t.mock.method(user, 'save', async () => user)
+
+  const res = fakeRes()
+  await updateMe({ user, body: { name: 'Kia Heng', email: 'new@example.com', role: 'admin' } }, res)
+
+  assert.equal(user.save.mock.callCount(), 1)
+  assert.equal(res.body.data.user.name, 'Kia Heng')
+  assert.equal(user.email, 'kia@example.com')
+  assert.equal(user.role, 'user')
+})
+
+// User.findById(...).select(...) is a chained query, so the mock returns an object with select().
+const mockFindById = (t, user) => t.mock.method(User, 'findById', () => ({ select: async () => user }))
+
+test('changePassword requires both passwords', async () => {
+  await rejectsWith(changePassword({ user: demoUser(), body: { newPassword: 'password456' } }, fakeRes()), 400)
+})
+
+test('changePassword rejects a new password shorter than 8 characters', async () => {
+  const req = { user: demoUser(), body: { currentPassword: 'password123', newPassword: 'short' } }
+  await rejectsWith(changePassword(req, fakeRes()), 400)
+})
+
+test('changePassword rejects a wrong current password', async (t) => {
+  const user = demoUser()
+  user.passwordHash = await bcrypt.hash('password123', 4)
+  mockFindById(t, user)
+  const req = { user, body: { currentPassword: 'wrong-password', newPassword: 'password456' } }
+  await rejectsWith(changePassword(req, fakeRes()), 400)
+})
+
+test('changePassword stores a hash of the new password', async (t) => {
+  const user = demoUser()
+  user.passwordHash = await bcrypt.hash('password123', 4)
+  mockFindById(t, user)
+  t.mock.method(user, 'save', async () => user)
+
+  const res = fakeRes()
+  await changePassword({ user, body: { currentPassword: 'password123', newPassword: 'password456' } }, res)
+
+  assert.equal(res.body.success, true)
+  assert.equal(user.save.mock.callCount(), 1)
+  assert.ok(await bcrypt.compare('password456', user.passwordHash))
 })
 
 test('logout clears the auth cookie', () => {
