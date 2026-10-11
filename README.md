@@ -25,10 +25,12 @@ flowchart LR
 |---|---|
 | Database models, seed data, error handling | Done |
 | Hawker-centre and stall API (search, near me, community summary) | Done |
-| Authentication (register, log in, log out, current user) | Done; profile page still to come |
+| Authentication (register, log in, log out, current user, change name and password) | Done |
 | Discovery frontend: home page and centre detail page | Done |
-| Community report submission and flagging | Not started |
-| Favourites API and page | Not started |
+| Favourites: API, page, heart buttons, reminder preferences | Done (reminders are saved but not sent) |
+| Profile page | Done |
+| Explore Map (OneMap basemap) | Done |
+| Community report submission and flagging | In progress |
 | Official NEA closure import | Placeholder script only |
 
 The app is designed for desktop browsers. Layouts also adapt to small screens, but phone support is not tested and is outside the current scope.
@@ -68,6 +70,11 @@ After `npm run seed` and `npm run dev`, open http://localhost:5173.
 - **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 2 km of your location; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the cuisine chips. Filters can be combined.
 - **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, cuisine chips, and an expandable list of recent updates.
 - Clicking a stall in the home page search results opens its centre page and highlights that stall.
+- **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first.
+- **Favourites (`/favourites`, login required)**: the heart on any centre or stall saves it. The page shows saved centres and stalls with their closures, live status and reminder.
+- **Profile (`/profile`, login required)**: account details, change name, change password, and reminder days and time for each favourite. Reminders are saved preferences only; nothing is sent yet.
+
+Seeded demo users can't log in, so register your own account to try favourites and the profile page.
 
 With the seed data, Seaside Demo Hawker Centre is officially closed today, Kampong Demo Food Centre has cleaning in 5 days, and Kampong has 3 stalls with live reports.
 
@@ -75,12 +82,13 @@ With the seed data, Seaside Demo Hawker Centre is officially closed today, Kampo
 
 ```text
 frontend/src/
-  views/        HomeView, HawkerCentreView, LoginView, RegisterView
+  views/        HomeView, HawkerCentreView, MapView, FavouritesView, ProfileView, LoginView, RegisterView
   components/   SearchBar, FilterChips, HawkerCentreCard, StallCard, StatusBadge, ClosureBadge,
-                OfficialClosureAlert, CommunityUpdateCard, LoadingState, ErrorState
-  services/     apiClient (shared fetch helper), hawkerService, authService
-  stores/       useAuthStore
-  utils/        status labels, closure dates, time formatting, location and distance
+                OfficialClosureAlert, CommunityUpdateCard, FavouriteButton, FavouriteAlertEditor,
+                LoadingState, ErrorState
+  services/     apiClient (shared fetch helper), hawkerService, authService, favouriteService
+  stores/       useAuthStore, useFavouriteStore
+  utils/        status labels, closure dates, time formatting, location and distance, reminder text
 ```
 
 ## API endpoints
@@ -91,6 +99,8 @@ frontend/src/
 | POST | `/api/auth/register` | `{ name, email, password }`; sets the login cookie |
 | POST | `/api/auth/login` | `{ email, password }`; sets the login cookie |
 | GET | `/api/auth/me` | Current user; 401 when logged out |
+| PATCH | `/api/auth/me` | `{ name }`; login required |
+| PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required |
 | POST | `/api/auth/logout` | Clears the login cookie |
 | GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first |
 | GET | `/api/hawker-centres/:id` | Includes official `closures` |
@@ -99,6 +109,10 @@ frontend/src/
 | GET | `/api/stalls` | Optional `search`, `cuisine`; includes the stall's centre name and address |
 | GET | `/api/stalls/:id` | Includes `liveReport` |
 | GET | `/api/stalls/:id/reports` | Live reports, newest first |
+| GET | `/api/favourites` | Login required; the user's favourites with the stall or centre filled in |
+| POST | `/api/favourites` | `{ targetType: 'Stall' or 'HawkerCentre', target }`; 409 if already saved |
+| PATCH | `/api/favourites/:id/alert` | `{ enabled, days: [0-6, 0 = Sunday], time: 'HH:mm' }` |
+| DELETE | `/api/favourites/:id` | Removes one of the user's favourites |
 
 All responses use `{ success: true, data: ... }` or `{ success: false, message: ... }`. Community reports expire 60 minutes after they are made; only live (unexpired) reports are returned.
 

@@ -29,11 +29,19 @@ async function register(details) {
   state.user = await authService.register(details)
 }
 
+async function updateName(name) {
+  state.user = await authService.updateMe({ name })
+}
+
+async function changePassword(passwords) {
+  await authService.changePassword(passwords)
+}
+
 async function logout() {
   await authService.logout()
   state.user = null
 }
 
 export function useAuthStore() {
-  return { state: readonly(state), loadCurrentUser, login, register, logout }
+  return { state: readonly(state), loadCurrentUser, login, register, updateName, changePassword, logout }
 }

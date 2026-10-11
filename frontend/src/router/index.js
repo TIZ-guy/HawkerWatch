@@ -3,6 +3,8 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import HawkerCentreView from '../views/HawkerCentreView.vue'
+import FavouritesView from '../views/FavouritesView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import { useAuthStore } from '../stores/useAuthStore.js'
 
 // meta.guestOnly: logged-in users are sent home (login, register).
@@ -12,9 +14,10 @@ const router = createRouter({
   routes: [
     { path: '/', component: HomeView },
     { path: '/hawker-centres/:id', component: HawkerCentreView },
-    { path: '/map', component: HomeView },
-    { path: '/favourites', component: HomeView },
-    { path: '/profile', component: HomeView },
+    // Loaded only when opened, so the map library isn't downloaded on every page
+    { path: '/map', component: () => import('../views/MapView.vue') },
+    { path: '/favourites', component: FavouritesView, meta: { requiresAuth: true } },
+    { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
     { path: '/login', component: LoginView, meta: { guestOnly: true } },
     { path: '/register', component: RegisterView, meta: { guestOnly: true } },
     { path: '/:pathMatch(.*)*', component: HomeView }

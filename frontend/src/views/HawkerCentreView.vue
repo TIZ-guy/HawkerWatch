@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar.vue'
 import FilterChips from '../components/FilterChips.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
+import FavouriteButton from '../components/FavouriteButton.vue'
 import { getCommunitySummary, getHawkerCentre, getHawkerCentreStalls } from '../services/hawkerService.js'
 
 const route = useRoute()
@@ -121,9 +122,12 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
           <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ centre.address
           }}<span v-if="centre.postalCode">, Singapore {{ centre.postalCode }}</span>
         </p>
-        <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-danger">
-          <i class="bi bi-sign-turn-right me-1" aria-hidden="true"></i>Directions
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+          <FavouriteButton target-type="HawkerCentre" :target-id="centre._id" :name="centre.name" with-label />
+          <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-sign-turn-right me-1" aria-hidden="true"></i>Directions
+          </a>
+        </div>
       </header>
 
       <div class="row g-4">

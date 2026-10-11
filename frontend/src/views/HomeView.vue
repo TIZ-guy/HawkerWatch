@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import SearchBar from '../components/SearchBar.vue'
 import FilterChips from '../components/FilterChips.vue'
 import HawkerCentreCard from '../components/HawkerCentreCard.vue'
@@ -21,14 +20,6 @@ const QUICK_FILTERS = [
   { value: 'open', label: 'Open today', icon: 'bi-door-open', title: 'No official NEA closure today' },
   { value: 'live', label: 'Has live updates', icon: 'bi-broadcast', title: 'At least one community update in the last hour' }
 ]
-
-const route = useRoute()
-const pageTitle = computed(() => {
-  if (route.path === '/map') return 'Explore the map'
-  if (route.path === '/favourites') return 'Your favourites'
-  if (route.path === '/profile') return 'Your profile'
-  return 'What are you craving today?'
-})
 
 const search = ref('')
 const debouncedSearch = ref('')
@@ -160,7 +151,7 @@ onMounted(() => {
 <template>
   <main class="container py-5">
     <span class="eyebrow">Singapore food, checked before you go</span>
-    <h1 class="display-5 fw-bold mt-2 mb-3">{{ pageTitle }}</h1>
+    <h1 class="display-5 fw-bold mt-2 mb-3">What are you craving today?</h1>
     <p class="lead text-secondary col-lg-7">
       Find official centre information and clearly labelled community updates for a smarter hawker run.
     </p>

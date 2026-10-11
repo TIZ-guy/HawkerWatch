@@ -1,8 +1,10 @@
 <script setup>
-// One stall. On the home page (showCentre) it links to the stall's centre.
-// On the centre page it shows the stall's newest live community report and can list recent ones.
-import { ref } from 'vue'
+// One stall. With showCentre it links to the stall's centre (home search, favourites).
+// When the stall data includes liveReport (centre page, favourites) it shows the newest
+// live community report and can list recent ones. Stall search results don't include it.
+import { computed, ref } from 'vue'
 import StatusBadge from './StatusBadge.vue'
+import FavouriteButton from './FavouriteButton.vue'
 import { getStallReports } from '../services/hawkerService.js'
 import { timeAgo, timeUntil } from '../utils/time.js'
 
@@ -11,6 +13,8 @@ const props = defineProps({
   stall: { type: Object, required: true },
   showCentre: { type: Boolean, default: false }
 })
+
+const hasLiveData = computed(() => 'liveReport' in props.stall)
 
 const reports = ref(null)
 const reportsOpen = ref(false)
@@ -45,18 +49,21 @@ async function toggleReports() {
             <span v-if="stall.unitNumber">#{{ stall.unitNumber }}</span>
           </p>
         </div>
-        <StatusBadge v-if="stall.liveReport" :status="stall.liveReport.status" />
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <StatusBadge v-if="stall.liveReport" :status="stall.liveReport.status" />
+          <FavouriteButton target-type="Stall" :target-id="stall._id" :name="stall.name" />
+        </div>
       </div>
 
       <RouterLink
-        v-if="showCentre && stall.hawkerCentre"
+        v-if="showCentre && stall.hawkerCentre?._id"
         class="d-inline-block small mt-2 text-danger"
         :to="`/hawker-centres/${stall.hawkerCentre._id}#stall-${stall._id}`"
       >
         <i class="bi bi-shop me-1" aria-hidden="true"></i>{{ stall.hawkerCentre.name }}
       </RouterLink>
 
-      <template v-if="!showCentre">
+      <template v-if="hasLiveData">
         <p v-if="stall.liveReport" class="small text-secondary mt-2 mb-0">
           <i class="bi bi-people me-1" aria-hidden="true"></i>Community update {{ timeAgo(stall.liveReport.createdAt) }}
           · expires {{ timeUntil(stall.liveReport.expiresAt) }}
@@ -85,6 +92,9 @@ async function toggleReports() {
           </ul>
         </div>
       </template>
+
+      <!-- Extra content from the parent, e.g. the alert summary on the Favourites page -->
+      <slot />
     </div>
   </article>
 </template>

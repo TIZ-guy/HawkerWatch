@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js'
 import { notFound, errorHandler } from './middleware/errorMiddleware.js'
 import hawkerCentreRoutes from './routes/hawkerCentreRoutes.js'
 import stallRoutes from './routes/stallRoutes.js'
+import favouriteRoutes from './routes/favouriteRoutes.js'
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/hawker-centres', hawkerCentreRoutes)
 app.use('/api/stalls', stallRoutes)
+app.use('/api/favourites', favouriteRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
