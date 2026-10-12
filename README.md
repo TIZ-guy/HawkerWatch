@@ -26,18 +26,24 @@ flowchart LR
 | Database models, seed data, error handling | Done |
 | Hawker-centre and stall API (search, near me, community summary) | Done |
 | Authentication (register, log in, log out, current user, change name and password) | Done |
+| Account security: password rules with live checklist, show/hide password, Caps Lock warning, failed-login limit, unique emails and names | Done |
 | Discovery frontend: home page and centre detail page | Done |
 | Favourites: API, page, heart buttons, reminder preferences | Done (reminders are saved but not sent) |
 | Profile page | Done |
 | Explore Map (OneMap basemap) | Done |
-| Community report submission and flagging | In progress |
+| Community reports: submit from stall cards, 60-minute expiry, 15-minute duplicate rule, rate limit | Done |
+| Community report flagging | API done; no Flag button in the app yet |
+| Interactive API docs at `/api/docs` | Done |
 | Official NEA closure import | Placeholder script only |
+| OneMap address search | Backend stub only |
+| Centre comments | Model and seed data only |
+| Deployment (Vercel + Render/Railway) | Not started |
 
 The app is designed for desktop browsers. Layouts also adapt to small screens, but phone support is not tested and is outside the current scope.
 
 ## Prerequisites
 
-Install Node.js 20+ and npm. You also need a MongoDB database: the team's MongoDB Atlas cluster, or MongoDB running on your own computer.
+Install Node.js 22 or newer and npm (CI uses Node 22). You also need a MongoDB database: the team's MongoDB Atlas cluster, or MongoDB running on your own computer.
 
 ## Local setup
 

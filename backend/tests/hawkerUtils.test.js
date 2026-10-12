@@ -1,7 +1,9 @@
 // Tests for the helper functions. They run without a database.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { contains, latestReportPerStall } from '../utils/hawkerUtils.js';
+import { contains, getLiveReports, latestReportPerStall } from '../utils/hawkerUtils.js';
+import { FLAG_HIDE_THRESHOLD } from '../utils/reportUtils.js';
+import StatusReport from '../models/StatusReport.js';
 
 test('contains matches part of a name and ignores upper and lower case', () => {
     assert.equal(contains('lak').test('Sample Laksa'), true);
@@ -24,4 +26,18 @@ test('latestReportPerStall keeps the first (newest) report of each stall', () =>
 
     assert.equal(latest.size, 2);
     assert.equal(latest.get('a').status, 'LONG_QUEUE');
+});
+
+test('getLiveReports skips expired reports and reports hidden by flags', async (t) => {
+    const find = t.mock.method(StatusReport, 'find', () => {
+        const query = { sort: () => query, select: () => query, lean: async () => [] };
+        return query;
+    });
+    await getLiveReports({ stall: 'a' });
+
+    const filter = find.mock.calls[0].arguments[0];
+    assert.equal(filter.stall, 'a');
+    assert.ok(filter.expiresAt.$gt instanceof Date);
+    // With a threshold of 3, a report is live only while flaggedBy has no 3rd entry
+    assert.deepEqual(filter[`flaggedBy.${FLAG_HIDE_THRESHOLD - 1}`], { $exists: false });
 });
