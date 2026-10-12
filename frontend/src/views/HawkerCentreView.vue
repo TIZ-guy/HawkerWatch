@@ -1,5 +1,5 @@
 <script setup>
-// Centre detail page: official closures, community summary and the centre's stalls.
+// Centre detail page: official closures, community summary, the centre's stalls and comments.
 // A link ending in #stall-<id> (from the home page stall results) scrolls to that stall.
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -11,6 +11,7 @@ import FilterChips from '../components/FilterChips.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FavouriteButton from '../components/FavouriteButton.vue'
+import CommentSection from '../components/CommentSection.vue'
 import { getCommunitySummary, getHawkerCentre, getHawkerCentreStalls } from '../services/hawkerService.js'
 
 const route = useRoute()
@@ -193,6 +194,8 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
 
         <div v-else class="alert alert-light border">No stalls have been added for this centre yet.</div>
       </section>
+
+      <CommentSection class="mt-5" :centre-id="centre._id" />
     </template>
   </main>
 </template>
