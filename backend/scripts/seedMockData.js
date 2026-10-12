@@ -1,6 +1,7 @@
 // Fills the database with fictional demo data. Run with: npm run seed
 // Warning: this deletes existing users, centres, stalls, reports, favourites and comments.
 import 'dotenv/config'
+import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
 import { connectDB } from '../config/db.js'
 import User from '../models/User.js'
@@ -11,14 +12,23 @@ import Favourite from '../models/Favourite.js'
 import Comment from '../models/Comment.js'
 import ImportLog from '../models/ImportLog.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
+import { passwordProblem } from '../utils/passwordRules.js'
 
 if (process.env.NODE_ENV === 'production') {
   console.error('Refusing to seed a production database.')
   process.exit(1)
 }
 
-// Not a real bcrypt hash, so no password can ever match it. Demo users cannot log in until auth is built.
+// Not a real bcrypt hash, so no password can ever match it. These background users can't log in.
 const NO_LOGIN_HASH = '!seed-user-cannot-log-in'
+
+// One account you can log in with after every seed. Development data only: the seed refuses to run
+// in production. SEED_DEMO_PASSWORD in backend/.env changes the password.
+const DEMO_LOGIN = {
+  name: 'Demo User',
+  email: 'demo@example.com',
+  password: process.env.SEED_DEMO_PASSWORD || 'Hawker#Run1'
+}
 
 const MINUTE = 60 * 1000
 const minutesAgo = (minutes) => new Date(Date.now() - minutes * MINUTE)
@@ -38,6 +48,9 @@ function report(stall, user, status, minutes) {
 }
 
 async function seed() {
+  const problem = passwordProblem(DEMO_LOGIN.password)
+  if (problem) throw new Error(`SEED_DEMO_PASSWORD: ${problem}`)
+
   await connectDB()
 
   const seeded = [User, HawkerCentre, Stall, StatusReport, Favourite, Comment]
@@ -45,10 +58,11 @@ async function seed() {
   // Make the database indexes match the schemas (ImportLog data is kept).
   await Promise.all([...seeded, ImportLog].map((Model) => Model.syncIndexes()))
 
-  const [diner, regular] = await User.create([
+  const [diner, regular, , demo] = await User.create([
     { name: 'Demo Diner', email: 'diner@example.com', passwordHash: NO_LOGIN_HASH },
     { name: 'Demo Regular', email: 'regular@example.com', passwordHash: NO_LOGIN_HASH },
-    { name: 'Demo Admin', email: 'admin@example.com', passwordHash: NO_LOGIN_HASH, role: 'admin' }
+    { name: 'Demo Admin', email: 'admin@example.com', passwordHash: NO_LOGIN_HASH, role: 'admin' },
+    { name: DEMO_LOGIN.name, email: DEMO_LOGIN.email, passwordHash: await bcrypt.hash(DEMO_LOGIN.password, 10) }
   ])
 
   const [kampong, riverside, seaside] = await HawkerCentre.create([
@@ -111,7 +125,15 @@ async function seed() {
       alert: { enabled: true, days: [1, 2, 3, 4, 5], time: '11:30' }
     },
     { user: diner._id, targetType: 'HawkerCentre', target: riverside._id },
-    { user: regular._id, targetType: 'Stall', target: laksa._id }
+    { user: regular._id, targetType: 'Stall', target: laksa._id },
+    // The demo login starts with two favourites, leaving Kampong and its stalls free to favourite live
+    { user: demo._id, targetType: 'HawkerCentre', target: riverside._id },
+    {
+      user: demo._id,
+      targetType: 'Stall',
+      target: prawnMee._id,
+      alert: { enabled: true, days: [1, 2, 3, 4, 5], time: '12:00' }
+    }
   ])
 
   await Comment.create([
@@ -122,6 +144,7 @@ async function seed() {
 
   const counts = await Promise.all(seeded.map(async (Model) => `${Model.modelName}: ${await Model.countDocuments()}`))
   console.log(`Seed complete. ${counts.join(', ')}`)
+  console.log(`Log in with ${DEMO_LOGIN.email} / ${process.env.SEED_DEMO_PASSWORD ? '(your SEED_DEMO_PASSWORD)' : DEMO_LOGIN.password}`)
 }
 
 seed()

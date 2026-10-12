@@ -32,7 +32,7 @@ flowchart LR
 | Profile page | Done |
 | Explore Map (OneMap basemap) | Done |
 | Community reports: submit from stall cards, 60-minute expiry, 15-minute duplicate rule, rate limit | Done |
-| Community report flagging | API done; no Flag button in the app yet |
+| Community report flagging: Flag button in each stall's recent updates; 3 flags hide a report everywhere | Done |
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA closure import | Placeholder script only |
 | OneMap address search | Backend stub only |
@@ -66,21 +66,21 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `npm run dev`: run frontend and backend together
 - `npm run build`: build the frontend
 - `npm test`: run backend tests
-- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports)
+- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
 - `npm run import:closures`: import official closure data (placeholder, Phase 4)
 
 ## Trying the frontend
 
 After `npm run seed` and `npm run dev`, open http://localhost:5173.
 
-- **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 2 km of your location; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the cuisine chips. Filters can be combined.
-- **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, cuisine chips, and an expandable list of recent updates.
+- **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 2 km of your location; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Food options** chips (cuisines). Filters can be combined.
+- **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, Food options chips, and an expandable list of recent updates with a **Flag** button for wrong reports.
 - Clicking a stall in the home page search results opens its centre page and highlights that stall.
 - **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first.
 - **Favourites (`/favourites`, login required)**: the heart on any centre or stall saves it. The page shows saved centres and stalls with their closures, live status and reminder.
 - **Profile (`/profile`, login required)**: account details, change name, change password, and reminder days and time for each favourite. Reminders are saved preferences only; nothing is sent yet.
 
-Seeded demo users can't log in, so register your own account to try favourites and the profile page.
+To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. The other seeded users can't log in. Accounts you register yourself last until the next `npm run seed`.
 
 With the seed data, Seaside Demo Hawker Centre is officially closed today, Kampong Demo Food Centre has cleaning in 5 days, and Kampong has 3 stalls with live reports.
 

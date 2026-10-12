@@ -58,6 +58,18 @@ function onStallReported(stallId, report) {
   loadSummary(route.params.id, { keepCurrent: true })
 }
 
+// After a flag hides a report, reload every stall's latest update and the summary, without a loading screen.
+async function refreshStatuses() {
+  const id = route.params.id
+  loadSummary(id, { keepCurrent: true })
+  try {
+    const fresh = await getHawkerCentreStalls(id)
+    if (id === route.params.id) stalls.value = fresh
+  } catch {
+    // Keep showing the current list; the next page load will catch up.
+  }
+}
+
 async function loadSummary(id, { keepCurrent = false } = {}) {
   if (!keepCurrent) summary.value = null // keepCurrent avoids flashing "Loading" on a refresh
   summaryError.value = ''
@@ -161,7 +173,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               <SearchBar v-model="stallSearch" id="stall-search" label="Search this centre" placeholder="Stall name, cuisine or unit" />
             </div>
             <div v-if="cuisineOptions.length > 1" class="col-md-6 d-flex flex-column justify-content-end">
-              <FilterChips v-model="cuisine" :options="cuisineOptions" label="Cuisine" small />
+              <FilterChips v-model="cuisine" :options="cuisineOptions" label="Food options" small />
             </div>
           </div>
 
@@ -173,7 +185,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               class="col-md-6 col-xl-4"
               :class="{ 'stall-highlight': stall._id === highlightedStallId }"
             >
-              <StallCard :stall="stall" @reported="(report) => onStallReported(stall._id, report)" />
+              <StallCard :stall="stall" @reported="(report) => onStallReported(stall._id, report)" @changed="refreshStatuses" />
             </div>
           </div>
           <div v-else class="alert alert-light border">No stalls match your search.</div>

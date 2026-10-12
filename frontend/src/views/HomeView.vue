@@ -167,8 +167,8 @@ onMounted(() => {
             />
             <FilterChips v-model="quickFilters" class="mt-3" :options="QUICK_FILTERS" multiple label="Quick filters" />
             <div v-if="cuisineOptions.length" class="mt-3">
-              <p class="small fw-semibold text-secondary mb-2">Cuisine</p>
-              <FilterChips v-model="cuisine" :options="cuisineOptions" label="Cuisine" small />
+              <p class="small fw-semibold text-secondary mb-2">Food options</p>
+              <FilterChips v-model="cuisine" :options="cuisineOptions" label="Food options" small />
             </div>
           </div>
         </div>
