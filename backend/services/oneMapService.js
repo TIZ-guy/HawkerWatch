@@ -3,6 +3,7 @@
 //
 // Status: stub. Nothing calls it yet. Before using it, put ONEMAP_TOKEN in backend/.env
 // and check the response shape against https://www.onemap.gov.sg/apidocs/
+import axios from 'axios';
 
 const ONEMAP_SEARCH_URL = 'https://www.onemap.gov.sg/api/common/elastic/search';
 
@@ -14,16 +15,18 @@ export async function searchAddress(searchText) {
         throw new Error('ONEMAP_TOKEN is not set in backend/.env');
     }
 
-    const url = `${ONEMAP_SEARCH_URL}?searchVal=${encodeURIComponent(searchText)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`;
-    const response = await fetch(url, { headers: { Authorization: token } });
-
-    if (!response.ok) {
-        throw new Error(`OneMap request failed (${response.status})`);
+    let response;
+    try {
+        // Axios builds the query string (and encodes searchText) from params.
+        response = await axios.get(ONEMAP_SEARCH_URL, {
+            params: { searchVal: searchText, returnGeom: 'Y', getAddrDetails: 'Y', pageNum: 1 },
+            headers: { Authorization: token }
+        });
+    } catch (error) {
+        throw new Error(`OneMap request failed (${error.response?.status || error.message})`);
     }
 
-    const data = await response.json();
-
-    return data.results.map(place => ({
+    return response.data.results.map(place => ({
         address: place.ADDRESS,
         postalCode: place.POSTAL,
         lat: Number(place.LATITUDE),

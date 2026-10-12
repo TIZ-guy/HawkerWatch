@@ -4,8 +4,8 @@ HawkerWatch is a local-development MVP for Singapore diners who want to check a 
 
 ## Stack
 
-- Vue 3, Vite, Vue Router, Bootstrap 5
-- Node.js, Express, Mongoose
+- Vue 3, Vite, Vue Router, Bootstrap 5, Axios
+- Node.js, Express, Mongoose, Axios (for outside APIs)
 - MongoDB Atlas, or MongoDB running locally
 - Vercel for the frontend and Render/Railway for the backend
 
@@ -92,7 +92,7 @@ frontend/src/
   components/   SearchBar, FilterChips, HawkerCentreCard, StallCard, StatusBadge, ClosureBadge,
                 OfficialClosureAlert, CommunityUpdateCard, FavouriteButton, FavouriteAlertEditor,
                 LoadingState, ErrorState
-  services/     apiClient (shared fetch helper), hawkerService, authService, favouriteService
+  services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService
   stores/       useAuthStore, useFavouriteStore
   utils/        status labels, closure dates, time formatting, location and distance, reminder text
 ```

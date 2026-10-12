@@ -1,17 +1,57 @@
-import { apiRequest } from './apiClient.js'
+// Calls for the auth endpoints (backend/routes/authRoutes.js). Login is kept in an httpOnly cookie.
+import axios from 'axios'
+import { API_URL, toError } from './apiClient.js'
 
-export const register = ({ name, email, password }) =>
-  apiRequest('/auth/register', { method: 'POST', body: { name, email, password } }).then((data) => data.user)
+export async function register({ name, email, password }) {
+  try {
+    const response = await axios.post(`${API_URL}/auth/register`, { name, email, password })
+    return response.data.data.user
+  } catch (error) {
+    throw toError(error)
+  }
+}
 
-export const login = ({ email, password }) =>
-  apiRequest('/auth/login', { method: 'POST', body: { email, password } }).then((data) => data.user)
+export async function login({ email, password }) {
+  try {
+    const response = await axios.post(`${API_URL}/auth/login`, { email, password })
+    return response.data.data.user
+  } catch (error) {
+    throw toError(error)
+  }
+}
 
-export const getCurrentUser = () => apiRequest('/auth/me').then((data) => data.user)
+export async function getCurrentUser() {
+  try {
+    const response = await axios.get(`${API_URL}/auth/me`)
+    return response.data.data.user
+  } catch (error) {
+    throw toError(error)
+  }
+}
 
-export const updateMe = ({ name }) =>
-  apiRequest('/auth/me', { method: 'PATCH', body: { name } }).then((data) => data.user)
+export async function updateMe({ name }) {
+  try {
+    const response = await axios.patch(`${API_URL}/auth/me`, { name })
+    return response.data.data.user
+  } catch (error) {
+    throw toError(error)
+  }
+}
 
-export const changePassword = ({ currentPassword, newPassword }) =>
-  apiRequest('/auth/password', { method: 'PATCH', body: { currentPassword, newPassword } })
+export async function changePassword({ currentPassword, newPassword }) {
+  try {
+    const response = await axios.patch(`${API_URL}/auth/password`, { currentPassword, newPassword })
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}
 
-export const logout =() => apiRequest('/auth/logout', { method: 'POST' })
+export async function logout() {
+  try {
+    const response = await axios.post(`${API_URL}/auth/logout`)
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}

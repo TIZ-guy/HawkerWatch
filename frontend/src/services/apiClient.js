@@ -1,30 +1,27 @@
-// Shared helper for calling the HawkerWatch backend.
+// Shared settings for calling the HawkerWatch backend with Axios.
 // In development Vite forwards /api to the backend (see vite.config.js).
 // Set VITE_API_URL in frontend/.env only if the API lives somewhere else.
-const BASE_URL = import.meta.env.VITE_API_URL || '/api'
+//
+// Every service calls axios directly, for example:
+//   const response = await axios.get(`${API_URL}/hawker-centres`)
+//   return response.data.data
+// The backend always answers { success: true, data } or { success: false, message }.
+import axios from 'axios'
 
-// Returns the response's `data` on success, throws an Error with the backend's message otherwise.
-// Usage: const data = await apiRequest('/hawker-centres')
-//        await apiRequest('/favourites', { method: 'POST', body: { stallId } })
-export async function apiRequest(path, { method = 'GET', body } = {}) {
-  let response
-  try {
-    response = await fetch(`${BASE_URL}${path}`, {
-      method,
-      // Sends the login cookie with every request. Without this the backend sees everyone as logged out.
-      credentials: 'include',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined
-    })
-  } catch {
-    throw new Error("Can't reach the server. Please check your connection and try again.")
-  }
+export const API_URL = import.meta.env.VITE_API_URL || '/api'
 
-  const payload = await response.json().catch(() => null)
-  if (!response.ok || !payload?.success) {
-    const error = new Error(payload?.message || 'Something went wrong. Please try again.')
-    error.status = response.status
-    throw error
+// Sends the login cookie with every request. Without this the backend sees everyone as logged out.
+axios.defaults.withCredentials = true
+
+// Turns an Axios error into an Error with the backend's message, which the pages show to the user.
+// error.status is the HTTP status (e.g. 404), so pages can react to specific errors.
+// Usage: catch (error) { throw toError(error) }
+export function toError(error) {
+  // No response at all means the request never reached the server.
+  if (!error.response) {
+    return new Error("Can't reach the server. Please check your connection and try again.")
   }
-  return payload.data
+  const friendly = new Error(error.response.data?.message || 'Something went wrong. Please try again.')
+  friendly.status = error.response.status
+  return friendly
 }
