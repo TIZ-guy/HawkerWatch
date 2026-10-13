@@ -1,6 +1,6 @@
 // OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
 // When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
-import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES } from '../utils/constants.js'
+import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, COMMENT_MAX_LENGTH } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 
 const id = (name, description) => ({ name, in: 'path', required: true, description, schema: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60718' } })
@@ -42,7 +42,8 @@ export default {
     { name: 'Hawker centres', description: 'Centres with official NEA closures, their stalls and community summaries.' },
     { name: 'Stalls' },
     { name: 'Reports', description: `Community status reports. Each expires after ${REPORT_TTL_MINUTES} minutes.` },
-    { name: 'Favourites', description: 'Saved stalls and centres, with optional reminder preferences.' }
+    { name: 'Favourites', description: 'Saved stalls and centres, with optional reminder preferences.' },
+    { name: 'Comments', description: 'Comments on a hawker centre. Authors can edit and delete their own; admins can delete any.' }
   ],
   components: {
     securitySchemes: {
@@ -126,6 +127,17 @@ export default {
           enabled: { type: 'boolean', example: true },
           days: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 }, description: '0 = Sunday', example: [1, 5] },
           time: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$', example: '11:30' }
+        }
+      },
+      Comment: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          hawkerCentre: { type: 'string' },
+          text: { type: 'string', maxLength: COMMENT_MAX_LENGTH, example: 'Go before 11:30, the lunch crowd builds quickly.' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Later than createdAt once the comment has been edited' },
+          user: { type: 'object', nullable: true, description: 'The author, or null if their account was deleted', properties: { _id: { type: 'string' }, name: { type: 'string', example: 'Demo Diner' } } }
         }
       },
       Favourite: {
@@ -230,6 +242,30 @@ export default {
       }
     },
 
+    '/api/hawker-centres/{id}/comments': {
+      get: {
+        tags: ['Comments'],
+        summary: "A centre's comments, newest first",
+        parameters: [id('id', 'Centre id')],
+        responses: { 200: ok('Comments', { type: 'array', items: ref('Comment') }), 400: error('Invalid id'), 404: error('Centre not found') }
+      },
+      post: {
+        tags: ['Comments'],
+        summary: 'Comment on a centre',
+        description: `Text is 1 to ${COMMENT_MAX_LENGTH} characters. Each IP can post 10 comments per 15 minutes.`,
+        ...loginRequired,
+        parameters: [id('id', 'Centre id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['text'], properties: { text: { type: 'string' } } }, { text: 'Plenty of seats on the second floor.' }) },
+        responses: {
+          201: ok('Comment posted', ref('Comment')),
+          400: error('Text missing or too long, or an invalid id'),
+          401: notLoggedIn,
+          404: error('Centre not found'),
+          429: error('Too many comments')
+        }
+      }
+    },
+
     '/api/stalls': {
       get: {
         tags: ['Stalls'],
@@ -317,6 +353,35 @@ export default {
         ...loginRequired,
         parameters: [id('id', 'Favourite id')],
         responses: { 200: ok('Removed', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60720' } }), 401: notLoggedIn, 404: error('Not one of your favourites') }
+      }
+    },
+
+    '/api/comments/{id}': {
+      patch: {
+        tags: ['Comments'],
+        summary: 'Edit your comment',
+        ...loginRequired,
+        parameters: [id('id', 'Comment id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['text'], properties: { text: { type: 'string' } } }, { text: 'Plenty of seats on the second floor after 2pm.' }) },
+        responses: {
+          200: ok('Comment updated', ref('Comment')),
+          400: error('Text missing or too long, or an invalid id'),
+          401: notLoggedIn,
+          403: error('Not your comment'),
+          404: error('Comment not found')
+        }
+      },
+      delete: {
+        tags: ['Comments'],
+        summary: 'Delete a comment (yours, or any comment as an admin)',
+        ...loginRequired,
+        parameters: [id('id', 'Comment id')],
+        responses: {
+          200: ok('Deleted', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60721' } }),
+          401: notLoggedIn,
+          403: error('Not your comment, and not an admin'),
+          404: error('Comment not found')
+        }
       }
     }
   }

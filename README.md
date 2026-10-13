@@ -36,7 +36,7 @@ flowchart LR
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA closure import | Placeholder script only |
 | OneMap address search | Backend stub only |
-| Centre comments | Model and seed data only |
+| Centre comments: post, edit and delete your own; admins can delete any | Done |
 | Deployment (Vercel + Render/Railway) | Not started |
 
 The app is designed for desktop browsers. Layouts also adapt to small screens, but phone support is not tested and is outside the current scope.
@@ -124,6 +124,10 @@ With `npm run dev` running, open **http://localhost:5173/api/docs** for an inter
 | GET | `/api/reports` | `stallId` or `hawkerCentreId`; live community reports |
 | POST | `/api/reports` | `{ stallId, status }`; login required; rate limited |
 | POST | `/api/reports/:id/flag` | Login required; flags a report |
+| GET | `/api/hawker-centres/:id/comments` | Newest first, each with the author's name |
+| POST | `/api/hawker-centres/:id/comments` | `{ text }` (1 to 500 characters); login required; rate limited |
+| PATCH | `/api/comments/:id` | `{ text }`; login required; author only |
+| DELETE | `/api/comments/:id` | Login required; author or admin |
 
 All responses use `{ success: true, data: ... }` or `{ success: false, message: ... }`. Community reports expire 60 minutes after they are made; only live (unexpired) reports are returned.
 

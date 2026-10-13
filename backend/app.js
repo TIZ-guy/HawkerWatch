@@ -9,6 +9,7 @@ import hawkerCentreRoutes from './routes/hawkerCentreRoutes.js'
 import stallRoutes from './routes/stallRoutes.js'
 import favouriteRoutes from './routes/favouriteRoutes.js'
 import reportRoutes from './routes/reportRoutes.js'
+import commentRoutes from './routes/commentRoutes.js'
 import swaggerUi from 'swagger-ui-express'
 import openapi from './docs/openapi.js'
 
@@ -34,6 +35,7 @@ app.use('/api/hawker-centres', hawkerCentreRoutes)
 app.use('/api/stalls', stallRoutes)
 app.use('/api/favourites', favouriteRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/comments', commentRoutes)
 
 // Interactive list of every endpoint (Swagger UI), plus the raw OpenAPI description
 app.get('/api/docs.json', (_req, res) => res.json(openapi))
