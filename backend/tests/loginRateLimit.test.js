@@ -1,5 +1,3 @@
-// Runs the real auth routes on a throwaway server to check the failed-login limit.
-// No database: User.findOne is replaced so every login attempt fails.
 import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import express from 'express'

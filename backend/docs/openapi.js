@@ -1,5 +1,3 @@
-// OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
-// When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
 import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 

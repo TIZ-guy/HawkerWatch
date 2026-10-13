@@ -1,6 +1,4 @@
 <script setup>
-// Reminder settings for one favourite: on/off, days of the week and a time.
-// Only saves the preference; HawkerWatch doesn't send notifications yet.
 import { computed, ref, watch } from 'vue'
 import { useFavouriteStore } from '../stores/useFavouriteStore.js'
 import { WEEK_DAYS, formatAlert } from '../utils/alerts.js'
@@ -50,7 +48,6 @@ async function save() {
 
   saving.value = true
   try {
-    // An empty time isn't valid HH:mm, so it's left out instead of sent as ''
     await favourites.updateAlert(props.favourite._id, {
       enabled: enabled.value,
       days: days.value,

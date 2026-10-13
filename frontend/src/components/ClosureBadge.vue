@@ -1,5 +1,4 @@
 <script setup>
-// Small official-closure badge for centre cards. The full details are in OfficialClosureAlert.
 import { computed } from 'vue'
 import { closureLabel, currentClosure, daysUntil, upcomingClosures } from '../utils/closures.js'
 

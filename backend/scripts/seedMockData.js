@@ -19,11 +19,8 @@ if (process.env.NODE_ENV === 'production') {
   process.exit(1)
 }
 
-// Not a real bcrypt hash, so no password can ever match it. These background users can't log in.
 const NO_LOGIN_HASH = '!seed-user-cannot-log-in'
 
-// One account you can log in with after every seed. Development data only: the seed refuses to run
-// in production. SEED_DEMO_PASSWORD in backend/.env changes the password.
 const DEMO_LOGIN = {
   name: 'Demo User',
   email: 'demo@example.com',
@@ -126,7 +123,6 @@ async function seed() {
     },
     { user: diner._id, targetType: 'HawkerCentre', target: riverside._id },
     { user: regular._id, targetType: 'Stall', target: laksa._id },
-    // The demo login starts with two favourites, leaving Kampong and its stalls free to favourite live
     { user: demo._id, targetType: 'HawkerCentre', target: riverside._id },
     {
       user: demo._id,

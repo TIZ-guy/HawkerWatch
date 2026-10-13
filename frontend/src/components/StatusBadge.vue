@@ -1,5 +1,4 @@
 <script setup>
-// Community status pill, e.g. "Long queue". Usage: <StatusBadge status="LONG_QUEUE" />
 import { computed } from 'vue'
 import { statusDisplay } from '../utils/status.js'
 

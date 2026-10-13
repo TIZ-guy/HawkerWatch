@@ -1,5 +1,4 @@
 <script setup>
-// Centre summary for lists: name, address, official closure badge and optional distance.
 import ClosureBadge from './ClosureBadge.vue'
 import FavouriteButton from './FavouriteButton.vue'
 import { formatDistance } from '../utils/location.js'
@@ -33,7 +32,6 @@ defineProps({
       <span class="mt-auto pt-3 small fw-semibold text-danger">
         View stalls and updates <i class="bi bi-arrow-right" aria-hidden="true"></i>
       </span>
-      <!-- Extra content from the parent, e.g. the alert summary on the Favourites page -->
       <slot />
     </div>
   </article>

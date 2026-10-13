@@ -13,7 +13,6 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          # Node 22 is the current long-term-support version (Node 20 stopped getting fixes in April 2026)
           node-version: 22
           cache: npm
       - name: Install root dependencies

@@ -133,7 +133,7 @@ test('updateMe saves the new name and ignores other fields', async (t) => {
   await updateMe({ user, body: { name: '  Kia   Heng ', email: 'new@example.com', role: 'admin' } }, res)
 
   assert.equal(user.save.mock.callCount(), 1)
-  assert.equal(res.body.data.user.name, 'Kia Heng') // extra spaces tidied
+  assert.equal(res.body.data.user.name, 'Kia Heng')
   assert.equal(user.email, 'kia@example.com')
   assert.equal(user.role, 'user')
 })
@@ -143,14 +143,12 @@ test('updateMe rejects a name another user has, but not your own', async (t) => 
   let filter
   t.mock.method(User, 'exists', async (query) => { filter = query; return { _id: 'someone-else' } })
   await rejectsWith(updateMe({ user, body: { name: 'Zachary' } }, fakeRes()), 409)
-  // The lookup skips the user's own account, so changing your own name's capitals is allowed
   assert.deepEqual(filter._id, { $ne: user._id })
 })
 
-// Runs the name lookup the way MongoDB would, against a list of existing names.
 const mockExistingNames = (t, names) =>
   t.mock.method(User, 'exists', async (query) => {
-    if (!query.name) return null // the email check
+    if (!query.name) return null
     const pattern = new RegExp(query.name.$regex, query.name.$options)
     return names.some((name) => pattern.test(name)) ? { _id: 'existing' } : null
   })
@@ -172,7 +170,6 @@ test('register allows names that only look similar', async (t) => {
   }
 })
 
-// User.findById(...).select(...) is a chained query, so the mock returns an object with select().
 const mockFindById = (t, user) => t.mock.method(User, 'findById', () => ({ select: async () => user }))
 
 test('changePassword requires both passwords', async () => {

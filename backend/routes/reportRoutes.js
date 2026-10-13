@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { submitReport, listReports, flagReport } from '../controllers/reportController.js'
-// Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
 import { protect } from '../middleware/authMiddleware.js'
 
 // Stops spamming: each IP can submit a limited number of reports per window

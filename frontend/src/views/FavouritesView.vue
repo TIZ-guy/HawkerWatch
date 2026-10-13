@@ -1,5 +1,4 @@
 <script setup>
-// The logged-in user's saved centres and stalls (the router only lets logged-in users in).
 import { computed, onMounted, ref } from 'vue'
 import HawkerCentreCard from '../components/HawkerCentreCard.vue'
 import StallCard from '../components/StallCard.vue'
@@ -12,17 +11,14 @@ import { formatAlert } from '../utils/alerts.js'
 const favourites = useFavouriteStore()
 const loading = ref(true)
 const removeError = ref('')
-// stallId -> stall from /stalls/:id, which adds the live report and the centre's name
 const stallDetails = ref({})
 
 const centreFavourites = computed(() => favourites.state.items.filter((item) => item.targetType === 'HawkerCentre'))
 const stallFavourites = computed(() => favourites.state.items.filter((item) => item.targetType === 'Stall'))
-// A favourite whose stall or centre has been deleted comes back with target: null
 const missing = computed(() => favourites.state.items.filter((item) => !item.target))
 
 async function load() {
   loading.value = true
-  // Refresh so every favourite has its stall or centre filled in, including ones just added
   await favourites.load({ refresh: true })
 
   const stalls = stallFavourites.value.filter((item) => item.target?._id)

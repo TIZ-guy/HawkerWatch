@@ -1,6 +1,4 @@
 <script setup>
-// Centre detail page: official closures, community summary and the centre's stalls.
-// A link ending in #stall-<id> (from the home page stall results) scrolls to that stall.
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import OfficialClosureAlert from '../components/OfficialClosureAlert.vue'
@@ -34,7 +32,6 @@ const cuisineOptions = computed(() =>
     .map((name) => ({ value: name, label: name }))
 )
 
-// The stall list is small, so filtering happens here instead of with another request.
 const visibleStalls = computed(() => {
   const term = stallSearch.value.toLowerCase()
   return stalls.value.filter((stall) =>
@@ -52,13 +49,11 @@ const directionsUrl = computed(() => {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
 })
 
-// After someone reports a stall, show it as that stall's latest update and recount the summary.
 function onStallReported(stallId, report) {
   stalls.value = stalls.value.map((stall) => (stall._id === stallId ? { ...stall, liveReport: report } : stall))
   loadSummary(route.params.id, { keepCurrent: true })
 }
 
-// After a flag hides a report, reload every stall's latest update and the summary, without a loading screen.
 async function refreshStatuses() {
   const id = route.params.id
   loadSummary(id, { keepCurrent: true })
@@ -66,12 +61,11 @@ async function refreshStatuses() {
     const fresh = await getHawkerCentreStalls(id)
     if (id === route.params.id) stalls.value = fresh
   } catch {
-    // Keep showing the current list; the next page load will catch up.
   }
 }
 
 async function loadSummary(id, { keepCurrent = false } = {}) {
-  if (!keepCurrent) summary.value = null // keepCurrent avoids flashing "Loading" on a refresh
+  if (!keepCurrent) summary.value = null
   summaryError.value = ''
   try {
     const result = await getCommunitySummary(id)
@@ -89,16 +83,15 @@ async function load(id) {
   stalls.value = []
   stallSearch.value = ''
   cuisine.value = ''
-  loadSummary(id) // shown separately, so it doesn't hold up the rest of the page
+  loadSummary(id)
 
   try {
     const [centreData, stallData] = await Promise.all([getHawkerCentre(id), getHawkerCentreStalls(id)])
-    if (id !== route.params.id) return // the user has moved to another centre
+    if (id !== route.params.id) return
     centre.value = centreData
     stalls.value = stallData
   } catch (error) {
     if (id !== route.params.id) return
-    // 400 is an id that isn't a valid MongoDB id, 404 is a valid id with no centre
     notFound.value = error.status === 400 || error.status === 404
     errorMessage.value = notFound.value ? "We couldn't find this hawker centre." : error.message
   } finally {

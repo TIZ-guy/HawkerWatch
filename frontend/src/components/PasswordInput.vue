@@ -1,7 +1,4 @@
 <script setup>
-// Password field with a show/hide button and a Caps Lock warning.
-// Usage: <PasswordInput id="login-password" v-model="form.password" autocomplete="current-password" required />
-// Other attributes (required, autocomplete, aria-describedby...) are passed to the <input>.
 import { computed, ref } from 'vue'
 
 defineOptions({ inheritAttrs: false })
@@ -36,7 +33,6 @@ function checkCapsLock(event) {
         @keyup="checkCapsLock"
         @blur="capsLockOn = false"
       />
-      <!-- mousedown.prevent keeps the cursor in the field, so typing carries on where it was -->
       <button
         type="button"
         class="btn btn-outline-secondary"

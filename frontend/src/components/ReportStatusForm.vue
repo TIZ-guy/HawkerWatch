@@ -1,6 +1,4 @@
 <script setup>
-// Small form for reporting a stall's status right now. Shown inside a stall card.
-// Emits submitted(report) after a successful report, or cancel.
 import { ref } from 'vue'
 import { STATUS_DISPLAY, STATUS_ORDER } from '../utils/status.js'
 import { submitReport } from '../services/reportService.js'

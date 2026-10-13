@@ -14,7 +14,6 @@ const form = reactive({ name: '', email: '', password: '', confirmPassword: '' }
 const error = ref('')
 const submitting = ref(false)
 
-// An old error is out of date as soon as the user changes something
 watch(form, () => { error.value = '' })
 
 // Checked in the browser for quick feedback; the backend checks again.

@@ -1,6 +1,4 @@
 <script setup>
-// Error message with an optional "Try again" button.
-// Usage: <ErrorState :message="error" retryable @retry="load" />
 defineProps({
   message: { type: String, required: true },
   retryable: { type: Boolean, default: false }

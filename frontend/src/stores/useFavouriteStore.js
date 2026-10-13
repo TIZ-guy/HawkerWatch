@@ -1,6 +1,3 @@
-// The logged-in user's favourites, shared by every component that calls useFavouriteStore().
-// Loads automatically after login and empties on logout.
-// Usage: const favourites = useFavouriteStore(), then favourites.find('Stall', stall._id)
 import { reactive, readonly, watch } from 'vue'
 import * as favouriteService from '../services/favouriteService.js'
 import { useAuthStore } from './useAuthStore.js'
@@ -9,13 +6,11 @@ const state = reactive({
   items: [],
   loaded: false,
   error: '',
-  // ids of targets with a request in progress, so buttons can't be double-clicked
   pending: []
 })
 
 let loading = null
 
-// `target` is an object after GET (populated) but only an id after POST.
 export const targetId = (favourite) => String(favourite.target?._id ?? favourite.target)
 
 function load({ refresh = false } = {}) {
@@ -42,7 +37,6 @@ function isPending(id) {
   return state.pending.includes(String(id))
 }
 
-// Adds or removes a favourite. Throws with the backend's message if it fails.
 async function toggle(targetType, id) {
   const key = String(id)
   if (isPending(key)) return
@@ -69,7 +63,6 @@ async function remove(favouriteId) {
 
 async function updateAlert(favouriteId, alert) {
   const updated = await favouriteService.updateFavouriteAlert(favouriteId, alert)
-  // Keep the filled-in target from the list; the update response only has its id.
   state.items = state.items.map((favourite) =>
     favourite._id === favouriteId ? { ...favourite, alert: updated.alert } : favourite
   )

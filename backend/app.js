@@ -14,8 +14,6 @@ import openapi from './docs/openapi.js'
 
 const app = express()
 
-// Render/Railway put a proxy in front of the API. Trusting it lets req.ip be the user's real IP,
-// so the login and report rate limits count each user separately instead of everyone together.
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)
 
 app.use(helmet())
@@ -35,7 +33,6 @@ app.use('/api/stalls', stallRoutes)
 app.use('/api/favourites', favouriteRoutes)
 app.use('/api/reports', reportRoutes)
 
-// Interactive list of every endpoint (Swagger UI), plus the raw OpenAPI description
 app.get('/api/docs.json', (_req, res) => res.json(openapi))
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapi, {
   customSiteTitle: 'HawkerWatch API',

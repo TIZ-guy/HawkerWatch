@@ -43,7 +43,6 @@ const findingLocation = computed(() => nearMe.value && !location.value && !locat
 const showStalls = computed(() => Boolean(debouncedSearch.value || cuisine.value))
 const hasFilters = computed(() => Boolean(search.value || quickFilters.value.length || cuisine.value))
 
-// Typing only searches once the user pauses, instead of on every key.
 let searchTimer
 watch(search, (value) => {
   clearTimeout(searchTimer)
@@ -64,8 +63,6 @@ watch(nearMe, async (on) => {
   }
 })
 
-// The list endpoint has no live-update counts, so "Has live updates" asks for each centre's
-// summary. Answers are reused for a couple of minutes to avoid repeating the same requests.
 const summaryCache = new Map()
 function getSummary(centreId) {
   const cached = summaryCache.get(centreId)
@@ -75,8 +72,6 @@ function getSummary(centreId) {
   return promise
 }
 
-// Centres come from every filter combined. Stalls (shown when searching or picking a cuisine)
-// are limited to the centres that pass the same filters.
 let latestRequest = 0
 async function loadResults() {
   const request = ++latestRequest
@@ -104,7 +99,7 @@ async function loadResults() {
       allowed = allowed.filter((_, index) => summaries[index]?.stallsReported > 0)
     }
 
-    if (request !== latestRequest) return // a newer search has started
+    if (request !== latestRequest) return
     const allowedIds = new Set(allowed.map((centre) => centre._id))
     const matchIds = matches && new Set(matches.map((centre) => centre._id))
     centres.value = matchIds ? allowed.filter((centre) => matchIds.has(centre._id)) : allowed
@@ -117,7 +112,6 @@ async function loadResults() {
   }
 }
 
-// Cuisine chips are the most common cuisines across all stalls.
 async function loadCuisines() {
   try {
     const counts = new Map()
@@ -129,7 +123,7 @@ async function loadCuisines() {
       .slice(0, MAX_CUISINE_CHIPS)
       .map(([name]) => ({ value: name, label: name }))
   } catch {
-    cuisineOptions.value = [] // the chips are optional, so the page works without them
+    cuisineOptions.value = []
   }
 }
 

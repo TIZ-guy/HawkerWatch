@@ -1,16 +1,13 @@
 <script setup>
-// Heart toggle for a stall or centre. Logged-out users are sent to log in and brought back.
-// Usage: <FavouriteButton target-type="Stall" :target-id="stall._id" :name="stall.name" />
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useFavouriteStore } from '../stores/useFavouriteStore.js'
 
 const props = defineProps({
-  targetType: { type: String, required: true }, // 'Stall' or 'HawkerCentre'
+  targetType: { type: String, required: true },
   targetId: { type: String, required: true },
   name: { type: String, default: '' },
-  // Shows "Save" / "Saved" next to the heart
   withLabel: { type: Boolean, default: false }
 })
 
@@ -58,7 +55,6 @@ async function onClick() {
 </template>
 
 <style scoped>
-/* Sits above a card's stretched link, so clicking the heart doesn't open the card. */
 .favourite-button {
   position: relative;
   z-index: 2;

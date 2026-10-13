@@ -1,7 +1,4 @@
 <script setup>
-// Live list of the password rules, ticked off as the user types.
-// Usage: <PasswordChecklist id="register-password-rules" :password="form.password" />
-// Point the password input's aria-describedby at the same id so screen readers announce the rules.
 import { computed } from 'vue'
 import { PASSWORD_RULES } from '../utils/passwordRules.js'
 

@@ -1,5 +1,4 @@
 <script setup>
-// Official NEA closure information for one centre. Kept visually separate from community updates.
 import { computed } from 'vue'
 import { closureDates, closureLabel, currentClosure, upcomingClosures } from '../utils/closures.js'
 

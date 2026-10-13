@@ -1,4 +1,3 @@
-// Asks the browser for the user's position. Resolves to { lat, lng }.
 export function getCurrentPosition() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -17,7 +16,6 @@ export function getCurrentPosition() {
   })
 }
 
-// Straight-line distance in km between { lat, lng } and a GeoJSON point ([lng, lat]).
 export function distanceKm(from, point) {
   if (!from || !point?.coordinates) return null
   const [lng, lat] = point.coordinates
@@ -28,7 +26,6 @@ export function distanceKm(from, point) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// "350 m" or "1.2 km"
 export function formatDistance(km) {
   if (km == null) return ''
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`

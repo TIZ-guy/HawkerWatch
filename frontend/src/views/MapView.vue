@@ -1,7 +1,4 @@
 <script setup>
-// Explore Map: every hawker centre on the OneMap basemap, coloured by official closure status.
-// The map images come from OneMap's public tile service, which needs no token.
-// Searching OneMap (which does need a token) stays in the backend's oneMapService.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -16,14 +13,12 @@ const SINGAPORE_BOUNDS = L.latLngBounds([1.144, 103.535], [1.494, 104.502])
 const UPCOMING_DAYS = 7
 
 const ONEMAP_TILES = 'https://www.onemap.gov.sg/maps/tiles/Default/{z}/{x}/{y}.png'
-// Attribution as OneMap's terms of use ask for it
 const ONEMAP_ATTRIBUTION =
   '<img src="https://www.onemap.gov.sg/web-assets/images/logo/om_logo.png" style="height:20px;width:20px;" alt="" />' +
   '&nbsp;<a href="https://www.onemap.gov.sg/" target="_blank" rel="noopener noreferrer">OneMap</a>' +
   '&nbsp;&copy;&nbsp;contributors&nbsp;&#124;&nbsp;' +
   '<a href="https://www.sla.gov.sg/" target="_blank" rel="noopener noreferrer">Singapore Land Authority</a>'
 
-// Bootstrap's danger / warning / success colours, so markers match the closure badges
 const MARKER_STYLES = {
   closed: { color: '#b02a37', fillColor: '#dc3545', label: 'Closed today' },
   soon: { color: '#997404', fillColor: '#ffc107', label: `Closure in the next ${UPCOMING_DAYS} days` },
@@ -46,7 +41,6 @@ const location = ref(null)
 const locating = ref(false)
 const locationError = ref('')
 
-// Leaflet objects are kept outside Vue's reactivity; Vue doesn't need to track them.
 let map = null
 let userMarker = null
 const markers = new Map()
@@ -54,7 +48,6 @@ const markers = new Map()
 const selected = computed(() => centres.value.find((centre) => centre._id === selectedId.value) || null)
 const distanceTo = (centre) => (location.value ? distanceKm(location.value, centre.location) : null)
 
-// Nearest first once we know where the user is; otherwise A to Z (the API's order).
 const listedCentres = computed(() => {
   if (!location.value) return centres.value
   return [...centres.value].sort((a, b) => (distanceTo(a) ?? Infinity) - (distanceTo(b) ?? Infinity))
@@ -239,7 +232,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .map {
   height: 620px;
-  z-index: 0; /* keeps Leaflet's panes below the sticky navbar */
+  z-index: 0;
 }
 
 .map-overlay {

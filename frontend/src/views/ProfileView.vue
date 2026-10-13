@@ -1,5 +1,4 @@
 <script setup>
-// Account details, name and password changes, and favourite reminders (logged-in users only).
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FavouriteAlertEditor from '../components/FavouriteAlertEditor.vue'
@@ -22,7 +21,6 @@ const memberSince = computed(() =>
     : ''
 )
 
-// Name
 const name = ref(user.value?.name || '')
 const savingName = ref(false)
 const nameMessage = ref('')
@@ -44,7 +42,6 @@ async function saveName() {
   }
 }
 
-// Password
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -52,7 +49,6 @@ const savingPassword = ref(false)
 const passwordMessage = ref('')
 const passwordError = ref('')
 
-// An old error is out of date as soon as the user changes a password field
 watch([currentPassword, newPassword, confirmPassword], () => { passwordError.value = '' })
 
 async function savePassword() {
@@ -79,7 +75,6 @@ async function savePassword() {
   }
 }
 
-// Reminders: "Edit" links on the Favourites page open /profile#alerts
 const favouritesWithTargets = computed(() => favourites.state.items.filter((item) => item.target))
 const loadingFavourites = ref(true)
 

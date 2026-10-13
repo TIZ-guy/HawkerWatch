@@ -14,7 +14,6 @@ const router = createRouter({
   routes: [
     { path: '/', component: HomeView },
     { path: '/hawker-centres/:id', component: HawkerCentreView },
-    // Loaded only when opened, so the map library isn't downloaded on every page
     { path: '/map', component: () => import('../views/MapView.vue') },
     { path: '/favourites', component: FavouritesView, meta: { requiresAuth: true } },
     { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
@@ -22,8 +21,6 @@ const router = createRouter({
     { path: '/register', component: RegisterView, meta: { guestOnly: true } },
     { path: '/:pathMatch(.*)*', component: HomeView }
   ],
-  // Back/forward returns to where the user was; new pages start at the top.
-  // Pages handle #hash links themselves, because their content loads after navigation.
   scrollBehavior: (_to, _from, savedPosition) => savedPosition || { top: 0 }
 })
 

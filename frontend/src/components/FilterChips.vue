@@ -1,6 +1,4 @@
 <script setup>
-// Toggleable chips. options: [{ value, label, icon? }]
-// multiple: v-model is an array of selected values; otherwise a single value ('' when none).
 const selected = defineModel({ type: [Array, String], default: () => [] })
 
 const props = defineProps({

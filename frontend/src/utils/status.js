@@ -1,4 +1,3 @@
-// How each community status looks in the UI. Keys match STATUS_VALUES in backend/utils/constants.js.
 export const STATUS_DISPLAY = {
   OPEN: { label: 'Open', badgeClass: 'text-bg-success', icon: 'bi-check-circle' },
   SHORT_QUEUE: { label: 'Short queue', badgeClass: 'text-bg-info', icon: 'bi-person' },

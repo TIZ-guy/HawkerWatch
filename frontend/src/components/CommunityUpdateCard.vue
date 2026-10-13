@@ -1,18 +1,14 @@
 <script setup>
-// Community summary for one centre (from /hawker-centres/:id/community-summary).
-// Clearly labelled as community submitted and time-limited, unlike OfficialClosureAlert.
 import { computed } from 'vue'
 import StatusBadge from './StatusBadge.vue'
 import { STATUS_ORDER } from '../utils/status.js'
 import { formatTime, timeAgo } from '../utils/time.js'
 
 const props = defineProps({
-  // { windowMinutes, stallsReported, byStatus, latestReportAt }, or null while loading or on error
   summary: { type: Object, default: null },
   error: { type: String, default: '' }
 })
 
-// Only the statuses that at least one stall has, in a fixed order.
 const reportedStatuses = computed(() =>
   STATUS_ORDER
     .filter((status) => props.summary?.byStatus?.[status] > 0)

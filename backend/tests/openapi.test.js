@@ -1,4 +1,3 @@
-// Keeps the /api/docs page honest: every real route must be documented, and nothing documented may be missing.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import openapi from '../docs/openapi.js'
@@ -8,7 +7,6 @@ import stallRoutes from '../routes/stallRoutes.js'
 import favouriteRoutes from '../routes/favouriteRoutes.js'
 import reportRoutes from '../routes/reportRoutes.js'
 
-// Same prefixes as app.js
 const MOUNTED = {
   '/api/auth': authRoutes,
   '/api/hawker-centres': hawkerCentreRoutes,
@@ -17,7 +15,6 @@ const MOUNTED = {
   '/api/reports': reportRoutes
 }
 
-// Express writes ':id', OpenAPI writes '{id}'. Trailing '/' is dropped so '/api/stalls/' matches '/api/stalls'.
 const toOpenApiPath = (prefix, path) => `${prefix}${path === '/' ? '' : path}`.replace(/:(\w+)/g, '{$1}')
 
 function realRoutes() {

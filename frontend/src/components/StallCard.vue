@@ -1,10 +1,4 @@
 <script setup>
-// One stall. With showCentre it links to the stall's centre (home search, favourites).
-// When the stall data includes liveReport (centre page, favourites) it shows the newest
-// live community report, can list recent ones, and lets logged-in users report the status.
-// Stall search results don't include liveReport.
-// Emits reported(report) after the user submits an update, so the page can refresh totals,
-// and changed() when a flag hides a report, so the page can reload the stall statuses.
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StatusBadge from './StatusBadge.vue'
@@ -17,7 +11,6 @@ import { timeAgo, timeUntil } from '../utils/time.js'
 import { statusDisplay } from '../utils/status.js'
 
 const props = defineProps({
-  // From /stalls (hawkerCentre populated) or /hawker-centres/:id/stalls (liveReport included)
   stall: { type: Object, required: true },
   showCentre: { type: Boolean, default: false }
 })
@@ -29,7 +22,6 @@ const router = useRouter()
 
 const hasLiveData = computed(() => 'liveReport' in props.stall)
 
-// The user's own new report shows straight away, without waiting for the page to reload.
 const submittedReport = ref(null)
 const liveReport = computed(() => submittedReport.value || props.stall.liveReport)
 
@@ -64,9 +56,6 @@ function startReport() {
   reporting.value = true
 }
 
-// Flagging a report as wrong. The reports list doesn't say who wrote each report (user ids
-// stay private), so only a report submitted from this card is known to be the user's own;
-// for older ones the backend refuses and its message is shown.
 const confirmingFlagId = ref('')
 const flaggingId = ref('')
 const flaggedIds = ref([])
@@ -99,7 +88,6 @@ async function confirmFlag(reportId) {
       flagMessage.value = 'Thanks. That update has been flagged as wrong.'
     }
   } catch (error) {
-    // 409: you flagged it before (e.g. before reloading the page), so just show it as flagged
     if (error.status === 409) flaggedIds.value = [...flaggedIds.value, reportId]
     else flagError.value = { id: reportId, message: error.message }
   } finally {
@@ -113,7 +101,7 @@ function onReported(report) {
   submittedReport.value = report
   thanks.value = 'Thanks! Your update is live for the next 60 minutes.'
   if (reportsOpen.value) loadReports()
-  else reports.value = null // fetched fresh next time the list opens
+  else reports.value = null
   emit('reported', report)
 }
 </script>
@@ -217,7 +205,6 @@ function onReported(report) {
         <ReportStatusForm v-if="reporting" :stall="stall" @submitted="onReported" @cancel="reporting = false" />
       </template>
 
-      <!-- Extra content from the parent, e.g. the alert summary on the Favourites page -->
       <slot />
     </div>
   </article>

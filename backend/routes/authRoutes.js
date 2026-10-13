@@ -5,8 +5,6 @@ import { protect } from '../middleware/authMiddleware.js'
 
 const LOGIN_WINDOW_MINUTES = 15
 
-// Slows down password guessing: only failed logins count, per IP address.
-// LOGIN_RATE_LIMIT_MAX in backend/.env changes the number of attempts allowed.
 const loginLimiter = rateLimit({
   windowMs: LOGIN_WINDOW_MINUTES * 60 * 1000,
   limit: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 10,

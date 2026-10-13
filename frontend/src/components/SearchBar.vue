@@ -1,5 +1,4 @@
 <script setup>
-// Search input with a clear button. Usage: <SearchBar v-model="search" label="Find a centre or stall" />
 const search = defineModel({ type: String, default: '' })
 
 defineProps({
