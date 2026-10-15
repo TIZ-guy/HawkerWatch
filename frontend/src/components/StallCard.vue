@@ -19,7 +19,9 @@ import { statusDisplay } from '../utils/status.js'
 const props = defineProps({
   // From /stalls (hawkerCentre populated) or /hawker-centres/:id/stalls (liveReport included)
   stall: { type: Object, required: true },
-  showCentre: { type: Boolean, default: false }
+  showCentre: { type: Boolean, default: false },
+  // { name, location } of the stall's centre, passed on to the report form for its distance check
+  centre: { type: Object, default: null }
 })
 const emit = defineEmits(['reported', 'changed'])
 
@@ -214,7 +216,7 @@ function onReported(report) {
           <p v-if="flagMessage" class="small text-success mt-2 mb-0" role="status">{{ flagMessage }}</p>
         </div>
 
-        <ReportStatusForm v-if="reporting" :stall="stall" @submitted="onReported" @cancel="reporting = false" />
+        <ReportStatusForm v-if="reporting" :stall="stall" :centre="centre" @submitted="onReported" @cancel="reporting = false" />
       </template>
 
       <!-- Extra content from the parent, e.g. the alert summary on the Favourites page -->

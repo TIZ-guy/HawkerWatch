@@ -1,18 +1,21 @@
-// Asks the browser for the user's position. Resolves to { lat, lng }.
-export function getCurrentPosition() {
+// The user's location and distances. Used by Near me, the Explore Map distance filter and the report location check.
+
+// Resolves to { lat, lng, accuracy } (accuracy in metres).
+// fresh: true asks for a new reading instead of one the browser remembered, which reports need.
+export function getCurrentPosition({ fresh = false } = {}) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Your browser does not support location.'))
       return
     }
     navigator.geolocation.getCurrentPosition(
-      (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
+      ({ coords }) => resolve({ lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }),
       (error) => reject(new Error(
         error.code === error.PERMISSION_DENIED
-          ? 'Location permission was denied. Allow it in your browser to use "Near me".'
+          ? 'Location permission is blocked. Allow location for this site in your browser and try again.'
           : "We couldn't get your location. Please try again."
       )),
-      { timeout: 10000, maximumAge: 5 * 60 * 1000 }
+      { timeout: 15000, maximumAge: fresh ? 0 : 5 * 60 * 1000, enableHighAccuracy: fresh }
     )
   })
 }
@@ -33,3 +36,7 @@ export function formatDistance(km) {
   if (km == null) return ''
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
+
+// Choices for "within X km", shared by the home page and Explore Map.
+export const DISTANCE_OPTIONS_KM = [1, 5, 10]
+export const DEFAULT_DISTANCE_KM = 5

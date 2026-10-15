@@ -31,7 +31,9 @@ flowchart LR
 | Favourites: API, page, heart buttons, reminder preferences | Done (reminders are saved but not sent) |
 | Profile page | Done |
 | Explore Map (OneMap basemap) | Done |
-| Community reports: submit from stall cards, 60-minute expiry, 15-minute duplicate rule, rate limit | Done |
+| Community reports: submit from stall cards or the Community reports page, 60-minute expiry, 15-minute duplicate rule, rate limit | Done |
+| Report location check: must be within 200 m of the centre (browser and backend; `REPORT_LOCATION_CHECK=off` for testing) | Done |
+| Distance filters: All / 1 / 5 / 10 km on Explore Map and the home page Near me | Done |
 | Community report flagging: Flag button in each stall's recent updates; 3 flags hide a report everywhere | Done |
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA closure import | Placeholder script only |
@@ -76,7 +78,8 @@ After `npm run seed` and `npm run dev`, open http://localhost:5173.
 - **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 2 km of your location; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Food options** chips (cuisines). Filters can be combined.
 - **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, Food options chips, and an expandable list of recent updates with a **Flag** button for wrong reports.
 - Clicking a stall in the home page search results opens its centre page and highlights that stall.
-- **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first.
+- **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first, and **Distance from you** (All, 1 km, 5 km, 10 km) shows only centres inside that radius.
+- **Community reports (`/reports`)**: the newest live reports across all centres, filterable by status, plus **Report a stall** (choose a centre, a stall and a status). Reports need you to be within 200 m of the centre; your location is only used for that check. For testing or the demo away from a centre, put `REPORT_LOCATION_CHECK=off` in `backend/.env` and the form shows "Location check off (testing)".
 - **Favourites (`/favourites`, login required)**: the heart on any centre or stall saves it. The page shows saved centres and stalls with their closures, live status and reminder.
 - **Profile (`/profile`, login required)**: account details, change name, change password, and reminder days and time for each favourite. Reminders are saved preferences only; nothing is sent yet.
 
@@ -88,11 +91,11 @@ With the seed data, Seaside Demo Hawker Centre is officially closed today, Kampo
 
 ```text
 frontend/src/
-  views/        HomeView, HawkerCentreView, MapView, FavouritesView, ProfileView, LoginView, RegisterView
+  views/        HomeView, HawkerCentreView, ExploreMapView, CommunityReportsView, FavouritesView, ProfileView, LoginView, RegisterView
   components/   SearchBar, FilterChips, HawkerCentreCard, StallCard, StatusBadge, ClosureBadge,
                 OfficialClosureAlert, CommunityUpdateCard, FavouriteButton, FavouriteAlertEditor,
                 LoadingState, ErrorState
-  services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService
+  services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService, reportService, commentService, locationService
   stores/       useAuthStore, useFavouriteStore
   utils/        status labels, closure dates, time formatting, location and distance, reminder text
 ```
@@ -122,7 +125,9 @@ With `npm run dev` running, open **http://localhost:5173/api/docs** for an inter
 | PATCH | `/api/favourites/:id/alert` | `{ enabled, days: [0-6, 0 = Sunday], time: 'HH:mm' }` |
 | DELETE | `/api/favourites/:id` | Removes one of the user's favourites |
 | GET | `/api/reports` | `stallId` or `hawkerCentreId`; live community reports |
-| POST | `/api/reports` | `{ stallId, status }`; login required; rate limited |
+| POST | `/api/reports` | `{ stallId, status, lat, lng }`; login required; rate limited; 403 if more than 200 m from the centre |
+| GET | `/api/reports/recent` | Newest live reports across all centres; optional `status` |
+| GET | `/api/reports/settings` | Whether the location check is on |
 | POST | `/api/reports/:id/flag` | Login required; flags a report |
 | GET | `/api/hawker-centres/:id/comments` | Newest first, each with the author's name |
 | POST | `/api/hawker-centres/:id/comments` | `{ text }` (1 to 500 characters); login required; rate limited |

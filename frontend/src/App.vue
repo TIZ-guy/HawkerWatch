@@ -31,6 +31,7 @@ async function logOut() {
         <div class="navbar-nav ms-auto gap-lg-2 align-items-lg-center">
           <RouterLink class="nav-link" to="/">Discover</RouterLink>
           <RouterLink class="nav-link" to="/map">Explore Map</RouterLink>
+          <RouterLink class="nav-link" to="/reports">Community reports</RouterLink>
           <RouterLink class="nav-link" to="/favourites">Favourites</RouterLink>
           <RouterLink class="nav-link" to="/profile">Profile</RouterLink>
 

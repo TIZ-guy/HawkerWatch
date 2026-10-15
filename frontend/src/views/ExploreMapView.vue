@@ -2,14 +2,15 @@
 // Explore Map: every hawker centre on the OneMap basemap, coloured by official closure status.
 // The map images come from OneMap's public tile service, which needs no token.
 // Searching OneMap (which does need a token) stays in the backend's oneMapService.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import HawkerCentreCard from '../components/HawkerCentreCard.vue'
 import ErrorState from '../components/ErrorState.vue'
+import FilterChips from '../components/FilterChips.vue'
 import { getHawkerCentres } from '../services/hawkerService.js'
 import { currentClosure, daysUntil, upcomingClosures } from '../utils/closures.js'
-import { distanceKm, formatDistance, getCurrentPosition } from '../utils/location.js'
+import { DISTANCE_OPTIONS_KM, distanceKm, formatDistance, getCurrentPosition } from '../services/locationService.js'
 
 const SINGAPORE_CENTRE = [1.3521, 103.8198]
 const SINGAPORE_BOUNDS = L.latLngBounds([1.144, 103.535], [1.494, 104.502])
@@ -49,15 +50,34 @@ const locationError = ref('')
 // Leaflet objects are kept outside Vue's reactivity; Vue doesn't need to track them.
 let map = null
 let userMarker = null
+let radiusCircle = null
 const markers = new Map()
+
+const DISTANCE_CHOICES = [
+  { value: 'all', label: 'All' },
+  ...DISTANCE_OPTIONS_KM.map((km) => ({ value: String(km), label: `${km} km` }))
+]
+const distanceChoice = ref('all')
+const radiusKm = computed(() => (distanceChoice.value === 'all' ? null : Number(distanceChoice.value)))
 
 const selected = computed(() => centres.value.find((centre) => centre._id === selectedId.value) || null)
 const distanceTo = (centre) => (location.value ? distanceKm(location.value, centre.location) : null)
 
+// With a distance chosen, only centres inside it; otherwise every centre.
+const visibleCentres = computed(() => {
+  if (!radiusKm.value || !location.value) return centres.value
+  return centres.value.filter((centre) => (distanceTo(centre) ?? Infinity) <= radiusKm.value)
+})
+
 // Nearest first once we know where the user is; otherwise A to Z (the API's order).
 const listedCentres = computed(() => {
-  if (!location.value) return centres.value
-  return [...centres.value].sort((a, b) => (distanceTo(a) ?? Infinity) - (distanceTo(b) ?? Infinity))
+  if (!location.value) return visibleCentres.value
+  return [...visibleCentres.value].sort((a, b) => (distanceTo(a) ?? Infinity) - (distanceTo(b) ?? Infinity))
+})
+
+const listHeading = computed(() => {
+  if (radiusKm.value && location.value) return `Within ${radiusKm.value} km`
+  return location.value ? 'Nearest centres' : 'All centres'
 })
 
 function markerStyle(centre, isSelected) {
@@ -125,13 +145,53 @@ async function locate() {
     userMarker = L.circleMarker(latLng, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#0d6efd', fillOpacity: 1 })
       .bindTooltip('You are here')
       .addTo(map)
-    map.flyTo(latLng, 14)
+    if (!radiusKm.value) map.flyTo(latLng, 14)
   } catch (error) {
     locationError.value = error.message
   } finally {
     locating.value = false
   }
 }
+
+// Shows only the markers inside the chosen distance, with the radius drawn around the user.
+function showDistance() {
+  if (!map) return
+  const visibleIds = new Set(visibleCentres.value.map((centre) => centre._id))
+  for (const [id, marker] of markers) {
+    if (visibleIds.has(id)) {
+      if (!map.hasLayer(marker)) marker.addTo(map)
+    } else {
+      marker.remove()
+    }
+  }
+  if (selectedId.value && !visibleIds.has(selectedId.value)) clearSelection()
+
+  radiusCircle?.remove()
+  radiusCircle = null
+  if (radiusKm.value && location.value) {
+    radiusCircle = L.circle([location.value.lat, location.value.lng], {
+      radius: radiusKm.value * 1000,
+      color: '#0d6efd',
+      weight: 1,
+      fillOpacity: 0.06,
+      interactive: false
+    }).addTo(map)
+    map.flyToBounds(radiusCircle.getBounds(), { padding: [24, 24] })
+  }
+}
+
+watch(distanceChoice, async (choice) => {
+  if (!choice) {
+    distanceChoice.value = 'all' // clicking the selected chip again goes back to All
+    return
+  }
+  if (choice !== 'all' && !location.value) {
+    await locate()
+    if (!location.value) distanceChoice.value = 'all'
+  }
+})
+
+watch([radiusKm, location], showDistance)
 
 async function loadCentres() {
   loading.value = true
@@ -186,6 +246,11 @@ onBeforeUnmount(() => {
 
       <aside class="col-lg-4 d-grid gap-3 align-content-start">
         <div>
+          <p class="small fw-semibold text-secondary mb-2">Distance from you</p>
+          <FilterChips v-model="distanceChoice" :options="DISTANCE_CHOICES" label="Distance from you" />
+        </div>
+
+        <div>
           <button type="button" class="btn btn-outline-danger" :disabled="locating" @click="locate">
             <span v-if="locating" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
             <i v-else class="bi bi-crosshair me-2" aria-hidden="true"></i>{{ location ? 'Update my location' : 'Show where I am' }}
@@ -205,9 +270,12 @@ onBeforeUnmount(() => {
         <section v-if="centres.length" class="card border-0 shadow-sm" aria-labelledby="map-list-heading">
           <div class="card-body pb-2">
             <h2 id="map-list-heading" class="h6 mb-0">
-              {{ location ? 'Nearest centres' : 'All centres' }} <span class="text-secondary">({{ centres.length }})</span>
+              {{ listHeading }} <span class="text-secondary">({{ visibleCentres.length }})</span>
             </h2>
           </div>
+          <p v-if="!visibleCentres.length" class="small text-secondary px-3 mb-3">
+            No hawker centres within {{ radiusKm }} km of you. Try a bigger distance.
+          </p>
           <div class="list-group list-group-flush centre-list">
             <button
               v-for="centre in listedCentres"

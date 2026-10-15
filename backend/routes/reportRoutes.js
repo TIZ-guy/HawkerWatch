@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { submitReport, listReports, flagReport } from '../controllers/reportController.js'
+import { submitReport, listReports, recentReports, reportSettings, flagReport } from '../controllers/reportController.js'
 // Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
 import { protect } from '../middleware/authMiddleware.js'
 
@@ -16,6 +16,8 @@ const submitLimiter = rateLimit({
 const router = Router()
 
 router.get('/', listReports)
+router.get('/recent', recentReports)
+router.get('/settings', reportSettings)
 router.post('/', protect, submitLimiter, submitReport)
 router.post('/:id/flag', protect, flagReport)
 

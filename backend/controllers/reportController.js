@@ -1,13 +1,20 @@
 import StatusReport from '../models/StatusReport.js'
 import Stall from '../models/Stall.js'
-import { STATUS_VALUES, DUPLICATE_WINDOW_MINUTES } from '../utils/constants.js'
+import { STATUS_VALUES, DUPLICATE_WINDOW_MINUTES, REPORT_MAX_DISTANCE_METRES } from '../utils/constants.js'
 import {
   duplicateCutoff,
   isExpired,
   isHidden,
   isLive,
-  calculateConfidence
+  calculateConfidence,
+  FLAG_HIDE_THRESHOLD
 } from '../utils/reportUtils.js'
+import { distanceMetres, formatMetres, isCoordinate } from '../utils/geo.js'
+
+// Set REPORT_LOCATION_CHECK=off in backend/.env to test or demo away from a hawker centre.
+const locationCheckOn = () => process.env.REPORT_LOCATION_CHECK !== 'off'
+
+const RECENT_LIMIT = 50
 
 const fail = (res, status, message) => res.status(status).json({ success: false, message })
 
@@ -27,17 +34,36 @@ const toPublicReport = (report) => ({
   flagCount: report.flaggedBy?.length ?? 0
 })
 
-// POST /api/reports   body: { stallId, status }
+// POST /api/reports   body: { stallId, status, lat, lng }
+// lat and lng are the reporter's position. They are only used for the distance check, never stored.
 export async function submitReport(req, res) {
-  const { stallId, status } = req.body ?? {}
+  const { stallId, status, lat, lng } = req.body ?? {}
 
   if (!isObjectId(stallId)) return fail(res, 400, 'A valid stallId is required')
   if (typeof status !== 'string' || !STATUS_VALUES.includes(status)) {
     return fail(res, 400, `status must be one of: ${STATUS_VALUES.join(', ')}`)
   }
 
-  const stall = await Stall.findById(stallId).select('hawkerCentre')
+  const stall = await Stall.findById(stallId).select('hawkerCentre').populate('hawkerCentre', 'name location')
   if (!stall) return fail(res, 404, 'Stall not found')
+
+  if (locationCheckOn()) {
+    if (!isCoordinate(lat, lng)) {
+      return fail(res, 400, 'Turn on location so we can check you are at the hawker centre')
+    }
+    const centre = stall.hawkerCentre
+    const coordinates = centre?.location?.coordinates
+    if (coordinates?.length === 2) {
+      const metres = distanceMetres({ lat, lng }, coordinates)
+      if (metres > REPORT_MAX_DISTANCE_METRES) {
+        return fail(
+          res,
+          403,
+          `You need to be at ${centre.name} to report this stall. You seem to be about ${formatMetres(metres)} away.`
+        )
+      }
+    }
+  }
 
   // Duplicate rule: one report per user per stall within the window
   const duplicate = await StatusReport.exists({
@@ -55,7 +81,7 @@ export async function submitReport(req, res) {
 
   const report = await StatusReport.create({
     stall: stall._id,
-    hawkerCentre: stall.hawkerCentre, // taken from the stall, never from the request
+    hawkerCentre: stall.hawkerCentre._id ?? stall.hawkerCentre, // taken from the stall, never from the request
     user: req.user._id,
     status
   })
@@ -88,6 +114,41 @@ export async function listReports(req, res) {
   if (stallId) data.summary = calculateConfidence(live)
 
   res.json({ success: true, data })
+}
+
+// GET /api/reports/recent?status=LONG_QUEUE
+// The newest live reports across every centre, with the stall and centre names, for the Community reports page.
+export async function recentReports(req, res) {
+  const { status } = req.query
+  if (status !== undefined && !STATUS_VALUES.includes(status)) {
+    return fail(res, 400, `status must be one of: ${STATUS_VALUES.join(', ')}`)
+  }
+
+  const filter = {
+    expiresAt: { $gt: new Date() },
+    [`flaggedBy.${FLAG_HIDE_THRESHOLD - 1}`]: { $exists: false }
+  }
+  if (status) filter.status = status
+
+  const found = await StatusReport.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(RECENT_LIMIT)
+    .populate('stall', 'name unitNumber cuisine')
+    .populate('hawkerCentre', 'name')
+    .lean()
+
+  // A stall or centre deleted since the report was made comes back as null
+  const reports = found.filter((report) => report.stall && report.hawkerCentre).map(toPublicReport)
+  res.json({ success: true, data: { reports } })
+}
+
+// GET /api/reports/settings
+// Lets the frontend say whether reports need the user's location.
+export function reportSettings(_req, res) {
+  res.json({
+    success: true,
+    data: { locationCheck: locationCheckOn(), maxDistanceMetres: REPORT_MAX_DISTANCE_METRES }
+  })
 }
 
 // POST /api/reports/:id/flag

@@ -2,7 +2,7 @@
 // Centre summary for lists: name, address, official closure badge and optional distance.
 import ClosureBadge from './ClosureBadge.vue'
 import FavouriteButton from './FavouriteButton.vue'
-import { formatDistance } from '../utils/location.js'
+import { formatDistance } from '../services/locationService.js'
 
 defineProps({
   centre: { type: Object, required: true },

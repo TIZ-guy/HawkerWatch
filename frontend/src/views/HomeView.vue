@@ -8,18 +8,19 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { getCommunitySummary, getHawkerCentres, getStalls } from '../services/hawkerService.js'
 import { currentClosure } from '../utils/closures.js'
-import { distanceKm, getCurrentPosition } from '../utils/location.js'
+import { DEFAULT_DISTANCE_KM, DISTANCE_OPTIONS_KM, distanceKm, getCurrentPosition } from '../services/locationService.js'
 
-const NEAR_ME_RADIUS_METRES = 2000
 const SEARCH_DELAY_MS = 300
 const SUMMARY_CACHE_MS = 2 * 60 * 1000
 const MAX_CUISINE_CHIPS = 10
 
 const QUICK_FILTERS = [
-  { value: 'near', label: 'Near me', icon: 'bi-geo-alt', title: `Centres within ${NEAR_ME_RADIUS_METRES / 1000} km of you` },
+  { value: 'near', label: 'Near me', icon: 'bi-geo-alt', title: 'Centres close to you, nearest first' },
   { value: 'open', label: 'Open today', icon: 'bi-door-open', title: 'No official NEA closure today' },
   { value: 'live', label: 'Has live updates', icon: 'bi-broadcast', title: 'At least one community update in the last hour' }
 ]
+
+const NEAR_DISTANCE_CHOICES = DISTANCE_OPTIONS_KM.map((km) => ({ value: String(km), label: `${km} km` }))
 
 const search = ref('')
 const debouncedSearch = ref('')
@@ -37,6 +38,9 @@ const hasLoaded = ref(false)
 const errorMessage = ref('')
 
 const nearMe = computed(() => quickFilters.value.includes('near'))
+const nearDistance = ref(String(DEFAULT_DISTANCE_KM))
+const nearDistanceKm = computed(() => Number(nearDistance.value) || DEFAULT_DISTANCE_KM)
+watch(nearDistance, (value) => { if (!value) nearDistance.value = String(DEFAULT_DISTANCE_KM) }) // clicking the chosen distance again keeps it
 const openOnly = computed(() => quickFilters.value.includes('open'))
 const liveOnly = computed(() => quickFilters.value.includes('live'))
 const findingLocation = computed(() => nearMe.value && !location.value && !locationError.value)
@@ -81,7 +85,7 @@ let latestRequest = 0
 async function loadResults() {
   const request = ++latestRequest
   const term = debouncedSearch.value
-  const near = location.value ? { ...location.value, radius: NEAR_ME_RADIUS_METRES } : {}
+  const near = location.value ? { lat: location.value.lat, lng: location.value.lng, radius: nearDistanceKm.value * 1000 } : {}
   loading.value = true
   errorMessage.value = ''
 
@@ -140,7 +144,7 @@ function clearFilters() {
   cuisine.value = ''
 }
 
-watch([debouncedSearch, cuisine, location, openOnly, liveOnly], loadResults)
+watch([debouncedSearch, cuisine, location, openOnly, liveOnly, nearDistanceKm], loadResults)
 
 onMounted(() => {
   loadResults()
@@ -166,6 +170,10 @@ onMounted(() => {
               placeholder="Search hawker centres or stalls"
             />
             <FilterChips v-model="quickFilters" class="mt-3" :options="QUICK_FILTERS" multiple label="Quick filters" />
+            <div v-if="nearMe" class="d-flex flex-wrap align-items-center gap-2 mt-2">
+              <span class="small text-secondary">Within</span>
+              <FilterChips v-model="nearDistance" :options="NEAR_DISTANCE_CHOICES" label="Near me distance" small />
+            </div>
             <div v-if="cuisineOptions.length" class="mt-3">
               <p class="small fw-semibold text-secondary mb-2">Food options</p>
               <FilterChips v-model="cuisine" :options="cuisineOptions" label="Food options" small />
@@ -201,7 +209,7 @@ onMounted(() => {
             Hawker centres <span class="text-secondary fs-5">({{ centres.length }})</span>
           </h2>
           <span v-if="location" class="text-secondary small">
-            Nearest first, within {{ NEAR_ME_RADIUS_METRES / 1000 }} km
+            Nearest first, within {{ nearDistanceKm }} km
           </span>
         </div>
 

@@ -1,6 +1,6 @@
 // OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
 // When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
-import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, COMMENT_MAX_LENGTH } from '../utils/constants.js'
+import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, COMMENT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 
 const id = (name, description) => ({ name, in: 'path', required: true, description, schema: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60718' } })
@@ -295,17 +295,37 @@ export default {
       post: {
         tags: ['Reports'],
         summary: "Report a stall's status right now",
-        description: `One report per user per stall every ${DUPLICATE_WINDOW_MINUTES} minutes. Each IP can submit 10 reports per 15 minutes.`,
+        description: `One report per user per stall every ${DUPLICATE_WINDOW_MINUTES} minutes. Each IP can submit 10 reports per 15 minutes. The reporter must be within ${REPORT_MAX_DISTANCE_METRES} m of the hawker centre: send their lat and lng, which are used for the check only and never stored. With REPORT_LOCATION_CHECK=off (testing and demos) the location isn't needed.`,
         ...loginRequired,
-        requestBody: { required: true, ...json({ type: 'object', required: ['stallId', 'status'], properties: { stallId: { type: 'string' }, status: { type: 'string', enum: STATUS_VALUES } } }, { stallId: '64b7f0c2a1b2c3d4e5f60719', status: 'SHORT_QUEUE' }) },
+        requestBody: { required: true, ...json({ type: 'object', required: ['stallId', 'status'], properties: { stallId: { type: 'string' }, status: { type: 'string', enum: STATUS_VALUES }, lat: { type: 'number' }, lng: { type: 'number' } } }, { stallId: '64b7f0c2a1b2c3d4e5f60719', status: 'SHORT_QUEUE', lat: 1.3521, lng: 103.8198 }) },
         responses: {
           201: ok('Report saved', { type: 'object', properties: { report: ref('Report') } }),
-          400: error('Invalid stallId or status'),
+          400: error('Invalid stallId or status, or no location sent'),
           401: notLoggedIn,
+          403: error(`More than ${REPORT_MAX_DISTANCE_METRES} m from the hawker centre`),
           404: error('Stall not found'),
           409: error(`Already reported this stall in the last ${DUPLICATE_WINDOW_MINUTES} minutes`),
           429: error('Too many reports')
         }
+      }
+    },
+    '/api/reports/recent': {
+      get: {
+        tags: ['Reports'],
+        summary: 'Newest live reports across every centre',
+        description: 'Up to 50, newest first, with the stall and centre names filled in. Expired and hidden reports are left out.',
+        parameters: [query('status', 'Only this status', { type: 'string', enum: STATUS_VALUES })],
+        responses: {
+          200: ok('Reports', { type: 'object', properties: { reports: { type: 'array', items: ref('Report') } } }),
+          400: error('Unknown status')
+        }
+      }
+    },
+    '/api/reports/settings': {
+      get: {
+        tags: ['Reports'],
+        summary: 'Whether reports need the reporter to be at the centre',
+        responses: { 200: ok('Settings', { type: 'object', example: { locationCheck: true, maxDistanceMetres: REPORT_MAX_DISTANCE_METRES } }) }
       }
     },
     '/api/reports/{id}/flag': {

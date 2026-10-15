@@ -15,7 +15,8 @@ const router = createRouter({
     { path: '/', component: HomeView },
     { path: '/hawker-centres/:id', component: HawkerCentreView },
     // Loaded only when opened, so the map library isn't downloaded on every page
-    { path: '/map', component: () => import('../views/MapView.vue') },
+    { path: '/map', component: () => import('../views/ExploreMapView.vue') },
+    { path: '/reports', component: () => import('../views/CommunityReportsView.vue') },
     { path: '/favourites', component: FavouritesView, meta: { requiresAuth: true } },
     { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
     { path: '/login', component: LoginView, meta: { guestOnly: true } },

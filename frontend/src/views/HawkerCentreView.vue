@@ -186,7 +186,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               class="col-md-6 col-xl-4"
               :class="{ 'stall-highlight': stall._id === highlightedStallId }"
             >
-              <StallCard :stall="stall" @reported="(report) => onStallReported(stall._id, report)" @changed="refreshStatuses" />
+              <StallCard :stall="stall" :centre="centre" @reported="(report) => onStallReported(stall._id, report)" @changed="refreshStatuses" />
             </div>
           </div>
           <div v-else class="alert alert-light border">No stalls match your search.</div>
