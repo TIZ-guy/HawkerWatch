@@ -9,6 +9,7 @@ import favouriteRoutes from '../routes/favouriteRoutes.js'
 import reportRoutes from '../routes/reportRoutes.js'
 import reviewRoutes from '../routes/reviewRoutes.js'
 import reviewPhotoRoutes from '../routes/reviewPhotoRoutes.js'
+import commentRoutes from '../routes/commentRoutes.js'
 
 // Same prefixes as app.js
 const MOUNTED = {
@@ -18,7 +19,8 @@ const MOUNTED = {
   '/api/favourites': favouriteRoutes,
   '/api/reports': reportRoutes,
   '/api/reviews': reviewRoutes,
-  '/api/review-photos': reviewPhotoRoutes
+  '/api/review-photos': reviewPhotoRoutes,
+  '/api/comments': commentRoutes
 }
 
 // Express writes ':id', OpenAPI writes '{id}'. Trailing '/' is dropped so '/api/stalls/' matches '/api/stalls'.

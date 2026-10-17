@@ -38,7 +38,8 @@ flowchart LR
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA closure import | Placeholder script only |
 | OneMap address search | Backend stub only |
-| Stall reviews: 1 to 5 stars with an optional written review, one per user per stall; edit and delete your own; admins can delete any; average shown on stall cards | Done |
+| Centre comments: post, edit and delete your own; admins can delete any | Done |
+| Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
 | Review photos: up to 4 per review (shrunk in the browser, stored in MongoDB); a self-scrolling slideshow on the stall page links each photo to its review | Done |
 | Deployment (Vercel + Render/Railway) | Not started |
 
@@ -69,7 +70,7 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `npm run dev`: run frontend and backend together
 - `npm run build`: build the frontend
 - `npm test`: run backend tests
-- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
 - `npm run import:closures`: import official closure data (placeholder, Phase 4)
 
 ## Trying the frontend
@@ -96,7 +97,7 @@ frontend/src/
   components/   SearchBar, FilterChips, HawkerCentreCard, StallCard, StatusBadge, ClosureBadge,
                 OfficialClosureAlert, CommunityUpdateCard, FavouriteButton, FavouriteAlertEditor,
                 LoadingState, ErrorState
-  services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService, reportService, reviewService, locationService
+  services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService, reportService, reviewService, commentService, locationService
   stores/       useAuthStore, useFavouriteStore
   utils/        status labels, closure dates, time formatting, location and distance, reminder text
 ```
@@ -130,13 +131,17 @@ With `npm run dev` running, open **http://localhost:5173/api/docs** for an inter
 | GET | `/api/reports/recent` | Newest live reports across all centres; optional `status` |
 | GET | `/api/reports/settings` | Whether the location check is on |
 | POST | `/api/reports/:id/flag` | Login required; flags a report |
-| GET | `/api/stalls/:id/reviews` | `{ average, count, reviews }`; reviews newest first, each with the author's name |
+| GET | `/api/stalls/:id/reviews` | `{ average, count, reviews }`; only reviews from the last 3 months; newest first, each with the author's name |
 | POST | `/api/stalls/:id/reviews` | `{ rating: 1-5, text (optional, up to 500 characters) }`; login required; one review per user per stall (409); rate limited |
 | PATCH | `/api/reviews/:id` | `{ rating, text }`; login required; author only |
 | DELETE | `/api/reviews/:id` | Login required; author or admin; also deletes the review's photos |
 | POST | `/api/reviews/:id/photos` | `multipart/form-data` with images in `photos`; JPEG, PNG or WebP, up to 2 MB each, 4 per review; login required; author only; rate limited |
 | DELETE | `/api/reviews/:id/photos/:photoId` | Login required; author or admin |
 | GET | `/api/review-photos/:id` | The image itself, for `<img src>` |
+| GET | `/api/hawker-centres/:id/comments` | Newest first, each with the author's name |
+| POST | `/api/hawker-centres/:id/comments` | `{ text }` (1 to 500 characters); login required; rate limited |
+| PATCH | `/api/comments/:id` | `{ text }`; login required; author only |
+| DELETE | `/api/comments/:id` | Login required; author or admin |
 
 All responses use `{ success: true, data: ... }` or `{ success: false, message: ... }`. Community reports expire 60 minutes after they are made; only live (unexpired) reports are returned.
 

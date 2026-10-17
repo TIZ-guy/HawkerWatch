@@ -9,6 +9,8 @@ import Stall from '../models/Stall.js';
 import User from '../models/User.js';
 import { AUTH_COOKIE, signToken } from '../utils/authToken.js';
 import { REVIEW_TEXT_MAX_LENGTH, MAX_PHOTO_BYTES } from '../utils/constants.js';
+import { reviewExpiresAt } from '../utils/reviewUtils.js';
+import { addReview } from '../controllers/reviewController.js';
 
 process.env.JWT_SECRET = 'test-secret';
 
@@ -151,6 +153,7 @@ test('POST /api/stalls/:id/reviews saves the rating and trimmed text as the logg
     const headers = loginAs(t, author);
     t.mock.method(Stall, 'exists', async () => ({ _id: STALL_ID }));
     t.mock.method(Review, 'exists', async () => null);
+    t.mock.method(Review, 'findOneAndDelete', async () => null);
     const create = t.mock.method(Review, 'create', async (fields) => ({ _id: REVIEW_ID, ...fields }));
     const base = await startServer(t);
 
@@ -168,6 +171,7 @@ test('POST /api/stalls/:id/reviews allows a rating with no text', async (t) => {
     const headers = loginAs(t, author);
     t.mock.method(Stall, 'exists', async () => ({ _id: STALL_ID }));
     t.mock.method(Review, 'exists', async () => null);
+    t.mock.method(Review, 'findOneAndDelete', async () => null);
     const create = t.mock.method(Review, 'create', async (fields) => ({ _id: REVIEW_ID, ...fields }));
     const base = await startServer(t);
 
@@ -392,4 +396,44 @@ test('GET /api/review-photos/:id gives 404 when the photo is missing', async (t)
 
     const response = await fetch(`${base}/api/review-photos/64b7f0c2a1b2c3d4e5f60750`);
     assert.equal(response.status, 404);
+});
+
+const DAY = 24 * 60 * 60 * 1000;
+
+test('GET /api/stalls/:id/reviews only asks for reviews posted or edited in the last 3 months', async (t) => {
+    t.mock.method(Stall, 'exists', async () => ({ _id: STALL_ID }));
+    const find = t.mock.method(Review, 'find', () => fakeQuery([]));
+    const base = await startServer(t);
+
+    await fetch(`${base}/api/stalls/${STALL_ID}/reviews`);
+
+    const filter = find.mock.calls[0].arguments[0];
+    const cutoff = filter.$or[0].createdAt.$gt;
+    assert.deepEqual(filter.$or[1], { editedAt: { $gt: cutoff } });
+    const daysAgo = (Date.now() - cutoff.getTime()) / DAY;
+    assert.ok(daysAgo > 89.9 && daysAgo < 90.1, `cutoff is ${daysAgo} days ago`);
+});
+
+// Calls addReview directly: the HTTP tests above already use up the review rate limit for this test run.
+test('addReview replaces the user\'s expired review and its photos', async (t) => {
+    t.mock.method(Stall, 'exists', async () => ({ _id: STALL_ID }));
+    t.mock.method(Review, 'exists', async () => null); // no current review
+    const findOneAndDelete = t.mock.method(Review, 'findOneAndDelete', async () => ({ _id: 'expired-review' }));
+    const deletePhotos = t.mock.method(ReviewPhoto, 'deleteMany', async () => ({}));
+    const create = t.mock.method(Review, 'create', async (fields) => ({ _id: REVIEW_ID, ...fields }));
+    const res = { status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+
+    await addReview({ params: { id: STALL_ID }, body: { rating: 2 }, user: author }, res, (error) => { throw error; });
+
+    assert.equal(res.statusCode, 201);
+    assert.ok(findOneAndDelete.mock.calls[0].arguments[0].createdAt.$lte instanceof Date);
+    assert.deepEqual(deletePhotos.mock.calls[0].arguments[0], { review: 'expired-review' });
+    assert.equal(create.mock.calls[0].arguments[0].rating, 2);
+});
+
+test('reviewExpiresAt is 90 days after the last edit, or after posting if never edited', () => {
+    const posted = new Date('2026-01-01T00:00:00Z');
+    const edited = new Date('2026-02-01T00:00:00Z');
+    assert.equal(reviewExpiresAt({ createdAt: posted, editedAt: null }).toISOString(), '2026-04-01T00:00:00.000Z');
+    assert.equal(reviewExpiresAt({ createdAt: posted, editedAt: edited }).toISOString(), '2026-05-02T00:00:00.000Z');
 });

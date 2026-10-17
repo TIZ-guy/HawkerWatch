@@ -1,9 +1,10 @@
 // Tests for the helper functions. They run without a database.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { contains, getLiveReports, latestReportPerStall } from '../utils/hawkerUtils.js';
+import { contains, getLiveReports, getRatings, latestReportPerStall } from '../utils/hawkerUtils.js';
 import { FLAG_HIDE_THRESHOLD } from '../utils/reportUtils.js';
 import StatusReport from '../models/StatusReport.js';
+import Review from '../models/Review.js';
 
 test('contains matches part of a name and ignores upper and lower case', () => {
     assert.equal(contains('lak').test('Sample Laksa'), true);
@@ -40,4 +41,14 @@ test('getLiveReports skips expired reports and reports hidden by flags', async (
     assert.ok(filter.expiresAt.$gt instanceof Date);
     // With a threshold of 3, a report is live only while flaggedBy has no 3rd entry
     assert.deepEqual(filter[`flaggedBy.${FLAG_HIDE_THRESHOLD - 1}`], { $exists: false });
+});
+
+test('getRatings only averages reviews from the last 3 months', async (t) => {
+    let pipeline;
+    t.mock.method(Review, 'aggregate', async (stages) => { pipeline = stages; return [{ _id: 's1', average: 4.25, count: 4 }]; });
+
+    const ratings = await getRatings(['s1']);
+
+    assert.ok(pipeline[0].$match.$or[0].createdAt.$gt instanceof Date);
+    assert.deepEqual(ratings, { s1: { average: 4.3, count: 4 } });
 });

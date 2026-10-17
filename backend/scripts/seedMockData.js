@@ -1,5 +1,5 @@
 // Fills the database with fictional demo data. Run with: npm run seed
-// Warning: this deletes existing users, centres, stalls, reports, favourites and reviews.
+// Warning: this deletes existing users, centres, stalls, reports, favourites, reviews and comments.
 import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
@@ -14,6 +14,7 @@ import StatusReport from '../models/StatusReport.js'
 import Favourite from '../models/Favourite.js'
 import Review from '../models/Review.js'
 import ReviewPhoto from '../models/ReviewPhoto.js'
+import Comment from '../models/Comment.js'
 import ImportLog from '../models/ImportLog.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
 import { passwordProblem } from '../utils/passwordRules.js'
@@ -60,7 +61,7 @@ async function seed() {
 
   await connectDB()
 
-  const seeded = [User, HawkerCentre, Stall, StatusReport, Favourite, Review, ReviewPhoto]
+  const seeded = [User, HawkerCentre, Stall, StatusReport, Favourite, Review, ReviewPhoto, Comment]
   await Promise.all(seeded.map((Model) => Model.deleteMany({})))
   // Make the database indexes match the schemas (ImportLog data is kept).
   await Promise.all([...seeded, ImportLog].map((Model) => Model.syncIndexes()))
@@ -167,6 +168,12 @@ async function seed() {
     }
     await review.save()
   }
+
+  await Comment.create([
+    { hawkerCentre: kampong._id, user: diner._id, text: 'Go before 11:30, the lunch crowd builds quickly.' },
+    { hawkerCentre: kampong._id, user: regular._id, text: 'Plenty of seats on the second floor.' },
+    { hawkerCentre: riverside._id, user: regular._id, text: 'Car park fills up on weekends.' }
+  ])
 
   const counts = await Promise.all(seeded.map(async (Model) => `${Model.modelName}: ${await Model.countDocuments()}`))
   console.log(`Seed complete. ${counts.join(', ')}`)

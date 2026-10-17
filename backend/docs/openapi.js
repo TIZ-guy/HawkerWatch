@@ -1,6 +1,6 @@
 // OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
 // When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
-import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS } from '../utils/constants.js'
+import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS, COMMENT_MAX_LENGTH } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 
 const id = (name, description) => ({ name, in: 'path', required: true, description, schema: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60718' } })
@@ -43,13 +43,25 @@ export default {
     { name: 'Stalls' },
     { name: 'Reports', description: `Community status reports. Each expires after ${REPORT_TTL_MINUTES} minutes.` },
     { name: 'Favourites', description: 'Saved stalls and centres, with optional reminder preferences.' },
-    { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' }
+    { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' },
+    { name: 'Comments', description: 'Comments on a hawker centre. Authors can edit and delete their own; admins can delete any.' }
   ],
   components: {
     securitySchemes: {
       cookieAuth: { type: 'apiKey', in: 'cookie', name: 'token', description: 'Set by POST /api/auth/login or /api/auth/register.' }
     },
     schemas: {
+      Comment: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          hawkerCentre: { type: 'string' },
+          text: { type: 'string', maxLength: COMMENT_MAX_LENGTH, example: 'Go before 11:30, the lunch crowd builds quickly.' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Later than createdAt once the comment has been edited' },
+          user: { type: 'object', nullable: true, description: 'The author, or null if their account was deleted', properties: { _id: { type: 'string' }, name: { type: 'string', example: 'Demo Diner' } } }
+        }
+      },
       Error: { type: 'object', properties: { success: { type: 'boolean', example: false }, message: { type: 'string', example: 'Please log in to continue' } } },
       User: {
         type: 'object',
@@ -250,6 +262,30 @@ export default {
       }
     },
 
+    '/api/hawker-centres/{id}/comments': {
+      get: {
+        tags: ['Comments'],
+        summary: "A centre's comments, newest first",
+        parameters: [id('id', 'Centre id')],
+        responses: { 200: ok('Comments', { type: 'array', items: ref('Comment') }), 400: error('Invalid id'), 404: error('Centre not found') }
+      },
+      post: {
+        tags: ['Comments'],
+        summary: 'Comment on a centre',
+        description: `Text is 1 to ${COMMENT_MAX_LENGTH} characters. Each IP can post 10 comments per 15 minutes.`,
+        ...loginRequired,
+        parameters: [id('id', 'Centre id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['text'], properties: { text: { type: 'string' } } }, { text: 'Plenty of seats on the second floor.' }) },
+        responses: {
+          201: ok('Comment posted', ref('Comment')),
+          400: error('Text missing or too long, or an invalid id'),
+          401: notLoggedIn,
+          404: error('Centre not found'),
+          429: error('Too many comments')
+        }
+      }
+    },
+
     '/api/stalls': {
       get: {
         tags: ['Stalls'],
@@ -268,6 +304,7 @@ export default {
       get: {
         tags: ['Reviews'],
         summary: "A stall's average rating and reviews, newest first",
+        description: 'Only current reviews are included: those posted, or with stars or text edited, in the last 3 months. Each review has expiresAt.',
         parameters: [id('id', 'Stall id')],
         responses: {
           200: ok('Reviews', { type: 'object', properties: { average: { type: 'number', nullable: true, example: 4.3 }, count: { type: 'integer', example: 2 }, reviews: { type: 'array', items: ref('Review') } } }),
@@ -458,6 +495,35 @@ export default {
           200: { description: 'The image', content: { 'image/jpeg': {}, 'image/png': {}, 'image/webp': {} } },
           400: error('Invalid id'),
           404: error('Photo not found')
+        }
+      }
+    },
+
+    '/api/comments/{id}': {
+      patch: {
+        tags: ['Comments'],
+        summary: 'Edit your comment',
+        ...loginRequired,
+        parameters: [id('id', 'Comment id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['text'], properties: { text: { type: 'string' } } }, { text: 'Plenty of seats on the second floor after 2pm.' }) },
+        responses: {
+          200: ok('Comment updated', ref('Comment')),
+          400: error('Text missing or too long, or an invalid id'),
+          401: notLoggedIn,
+          403: error('Not your comment'),
+          404: error('Comment not found')
+        }
+      },
+      delete: {
+        tags: ['Comments'],
+        summary: 'Delete a comment (yours, or any comment as an admin)',
+        ...loginRequired,
+        parameters: [id('id', 'Comment id')],
+        responses: {
+          200: ok('Deleted', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60721' } }),
+          401: notLoggedIn,
+          403: error('Not your comment, and not an admin'),
+          404: error('Comment not found')
         }
       }
     }

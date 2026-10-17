@@ -272,6 +272,7 @@ async function adminRemovePhoto(review, photoId) {
       <h2 id="reviews-heading" class="h3 mb-0">Reviews</h2>
       <StarRating v-if="average !== null" :rating="average" :count="count" />
     </div>
+    <p class="small text-secondary mt-n2 mb-3">Reviews count for 3 months after they're posted or last edited, so ratings stay up to date.</p>
 
     <LoadingState v-if="loading" message="Loading reviews..." />
 
@@ -373,6 +374,9 @@ async function adminRemovePhoto(review, photoId) {
                 </span>
                 <span class="small text-secondary" :title="formatDate(review.createdAt)">
                   {{ timeAgo(review.createdAt) }}<span v-if="review.editedAt"> · edited</span>
+                </span>
+                <span v-if="isMine(review) && review.expiresAt" class="small text-secondary" title="Edit your review to keep it counting for longer">
+                  · counts until {{ formatDate(review.expiresAt) }}
                 </span>
               </div>
               <StarRating :rating="review.rating" :show-number="false" />

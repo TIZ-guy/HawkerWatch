@@ -3,6 +3,7 @@ import ReviewPhoto from '../models/ReviewPhoto.js';
 import Stall from '../models/Stall.js';
 import { REVIEW_TEXT_MAX_LENGTH, MAX_REVIEW_PHOTOS } from '../utils/constants.js';
 import { detectImageType } from '../utils/photoUtils.js';
+import { currentReviewFilter, expiredReviewFilter, reviewExpiresAt } from '../utils/reviewUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -44,6 +45,7 @@ function toPublicReview(review, user) {
         photos: (review.photos || []).map(photoId => String(photoId)), // ids; images are at /api/review-photos/:id
         createdAt: review.createdAt,
         editedAt: review.editedAt || null, // when the stars or text were last changed, or null
+        expiresAt: reviewExpiresAt(review), // 3 months after it was posted or last edited
         user: user ? { _id: user._id, name: user.name } : null
     };
 }
@@ -56,6 +58,7 @@ function isAuthor(review, user) {
 // ============================================================
 // GET /api/stalls/:id/reviews
 // The stall's average rating, number of reviews, and the reviews newest first.
+// Only current reviews count: expired ones (over 3 months since posted or edited) are left out.
 // ============================================================
 
 export const getStallReviews = async (req, res, next) => {
@@ -68,7 +71,7 @@ export const getStallReviews = async (req, res, next) => {
         }
 
         const reviews = await Review
-            .find({ stall: id })
+            .find({ stall: id, ...currentReviewFilter() })
             .populate('user', 'name')
             .sort({ createdAt: -1 })
             .lean();
@@ -98,7 +101,8 @@ export const getStallReviews = async (req, res, next) => {
 // ============================================================
 // POST /api/stalls/:id/reviews
 // Login required. Body: { rating: 1-5, text (optional) }
-// Each user can review a stall once (409 if they already have; edit it instead).
+// Each user has one current review per stall (409 if they already have; edit it instead).
+// A review that has expired is replaced, since it is hidden and can't be edited from the page.
 // ============================================================
 
 export const addReview = async (req, res, next) => {
@@ -116,9 +120,15 @@ export const addReview = async (req, res, next) => {
             return;
         }
 
-        if (await Review.exists({ stall: id, user: req.user._id })) {
+        if (await Review.exists({ stall: id, user: req.user._id, ...currentReviewFilter() })) {
             res.status(409).json({ success: false, message: 'You have already reviewed this stall. Edit your review instead.' });
             return;
+        }
+
+        // An expired review is hidden, so the user can't see it to edit it. Replace it (and its photos) instead.
+        const expired = await Review.findOneAndDelete({ stall: id, user: req.user._id, ...expiredReviewFilter() });
+        if (expired) {
+            await ReviewPhoto.deleteMany({ review: expired._id });
         }
 
         const review = await Review.create({ stall: id, user: req.user._id, rating: rating, text: text });

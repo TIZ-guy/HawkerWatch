@@ -8,6 +8,7 @@ import Stall from '../models/Stall.js'
 import StatusReport from '../models/StatusReport.js'
 import Favourite from '../models/Favourite.js'
 import Review from '../models/Review.js'
+import Comment from '../models/Comment.js'
 import { errorHandler } from '../middleware/errorMiddleware.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
 
@@ -88,4 +89,9 @@ test('errorHandler turns duplicate keys into 409 responses', () => {
   errorHandler({ code: 11000, keyValue: { email: 'a@example.com' } }, {}, res, () => {})
   assert.equal(res.statusCode, 409)
   assert.equal(res.body.message, 'Duplicate value for email')
+})
+
+test('Comment text is limited to 500 characters', () => {
+  const comment = new Comment({ hawkerCentre: id(), user: id(), text: 'a'.repeat(501) })
+  assert.deepEqual(errorPaths(comment), ['text'])
 })
