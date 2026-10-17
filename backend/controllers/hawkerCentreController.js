@@ -1,7 +1,7 @@
 import HawkerCentre from '../models/HawkerCentre.js';
 import Stall from '../models/Stall.js';
 import { STATUS_VALUES, REPORT_TTL_MINUTES } from '../utils/constants.js';
-import { contains, getLiveReports, latestReportPerStall } from '../utils/hawkerUtils.js';
+import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor } from '../utils/hawkerUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -76,7 +76,8 @@ export const getHawkerCentreById = async (req, res, next) => {
 // ============================================================
 // GET /api/hawker-centres/:id/stalls
 // Optional query: search, cuisine
-// Each stall has its newest live community report as liveReport (or null).
+// Each stall has its newest live community report as liveReport (or null),
+// and its star rating as rating: { average, count }.
 // ============================================================
 
 export const getHawkerCentreStalls = async (req, res, next) => {
@@ -99,10 +100,12 @@ export const getHawkerCentreStalls = async (req, res, next) => {
 
         const stalls = await Stall.find(filter).sort({ name: 1 }).lean();
         const latest = latestReportPerStall(await getLiveReports({ hawkerCentre: id }));
+        const ratings = await getRatings(stalls.map(stall => stall._id));
 
         const data = stalls.map(stall => ({
             ...stall,
-            liveReport: latest.get(String(stall._id)) || null
+            liveReport: latest.get(String(stall._id)) || null,
+            rating: ratingFor(ratings, stall._id)
         }));
 
         res.status(200).json({ success: true, data });

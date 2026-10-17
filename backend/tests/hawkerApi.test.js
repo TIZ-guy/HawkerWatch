@@ -6,6 +6,7 @@ import app from '../app.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import Stall from '../models/Stall.js';
 import StatusReport from '../models/StatusReport.js';
+import Review from '../models/Review.js';
 
 const CENTRE_ID = '64b7f0c2a1b2c3d4e5f60718';
 const STALL_ID = '64b7f0c2a1b2c3d4e5f60719';
@@ -83,7 +84,7 @@ test('GET /api/hawker-centres/:id gives 400 for an id that is not an ObjectId', 
     assert.equal((await response.json()).success, false);
 });
 
-test('GET /api/hawker-centres/:id/stalls adds each stall\'s newest live report', async (t) => {
+test('GET /api/hawker-centres/:id/stalls adds each stall\'s newest live report and rating', async (t) => {
     t.mock.method(HawkerCentre, 'exists', async () => ({ _id: CENTRE_ID }));
     t.mock.method(Stall, 'find', () => fakeQuery([
         { _id: STALL_ID, name: 'Laksa' },
@@ -93,12 +94,15 @@ test('GET /api/hawker-centres/:id/stalls adds each stall\'s newest live report',
         { stall: STALL_ID, status: 'LONG_QUEUE' },
         { stall: STALL_ID, status: 'OPEN' }
     ]));
+    t.mock.method(Review, 'aggregate', async () => [{ _id: STALL_ID, average: 4.333, count: 3 }]);
 
     const base = await startServer(t);
     const body = await (await fetch(`${base}/api/hawker-centres/${CENTRE_ID}/stalls`)).json();
 
     assert.equal(body.data[0].liveReport.status, 'LONG_QUEUE');
     assert.equal(body.data[1].liveReport, null);
+    assert.deepEqual(body.data[0].rating, { average: 4.3, count: 3 }); // rounded to 1 decimal place
+    assert.deepEqual(body.data[1].rating, { average: null, count: 0 }); // no reviews yet
 });
 
 test('GET /api/hawker-centres/:id/community-summary counts each stall once', async (t) => {
@@ -118,6 +122,18 @@ test('GET /api/hawker-centres/:id/community-summary counts each stall once', asy
     assert.equal(body.data.byStatus.LONG_QUEUE, 0);
     // Only reports that have not expired are queried.
     assert.ok(find.mock.calls[0].arguments[0].expiresAt.$gt instanceof Date);
+});
+
+test('GET /api/stalls/:id includes the newest live report and the rating', async (t) => {
+    t.mock.method(Stall, 'findById', () => fakeQuery({ _id: STALL_ID, name: 'Laksa' }));
+    t.mock.method(StatusReport, 'find', () => fakeQuery([{ stall: STALL_ID, status: 'OPEN' }]));
+    t.mock.method(Review, 'aggregate', async () => [{ _id: STALL_ID, average: 5, count: 1 }]);
+
+    const base = await startServer(t);
+    const body = await (await fetch(`${base}/api/stalls/${STALL_ID}`)).json();
+
+    assert.equal(body.data.liveReport.status, 'OPEN');
+    assert.deepEqual(body.data.rating, { average: 5, count: 1 });
 });
 
 test('GET /api/stalls/:id gives 404 when the stall is missing', async (t) => {

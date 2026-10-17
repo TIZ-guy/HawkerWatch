@@ -1,5 +1,7 @@
 <script setup>
-// One stall. With showCentre it links to the stall's centre (home search, favourites).
+// One stall. The name links to the stall's own page (/stalls/:id), and its star rating is shown
+// when the stall data includes one. With showCentre it links to the stall's centre (home search, favourites).
+// With statusOnly it shows only the live status part (used on the stall page, which shows the name itself).
 // When the stall data includes liveReport (centre page, favourites) it shows the newest
 // live community report, can list recent ones, and lets logged-in users report the status.
 // Stall search results don't include liveReport.
@@ -10,6 +12,7 @@ import { useRoute, useRouter } from 'vue-router'
 import StatusBadge from './StatusBadge.vue'
 import FavouriteButton from './FavouriteButton.vue'
 import ReportStatusForm from './ReportStatusForm.vue'
+import StarRating from './StarRating.vue'
 import { getStallReports } from '../services/hawkerService.js'
 import { flagReport } from '../services/reportService.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
@@ -20,6 +23,7 @@ const props = defineProps({
   // From /stalls (hawkerCentre populated) or /hawker-centres/:id/stalls (liveReport included)
   stall: { type: Object, required: true },
   showCentre: { type: Boolean, default: false },
+  statusOnly: { type: Boolean, default: false },
   // { name, location } of the stall's centre, passed on to the report form for its distance check
   centre: { type: Object, default: null }
 })
@@ -123,13 +127,18 @@ function onReported(report) {
 <template>
   <article class="card border-0 shadow-sm h-100">
     <div class="card-body p-3 p-lg-4">
-      <div class="d-flex justify-content-between align-items-start gap-2">
+      <div v-if="!statusOnly" class="d-flex justify-content-between align-items-start gap-2">
         <div>
-          <h3 class="h6 mb-1">{{ stall.name }}</h3>
+          <h3 class="h6 mb-1">
+            <RouterLink :to="`/stalls/${stall._id}`" class="stall-link">{{ stall.name }}</RouterLink>
+          </h3>
           <p class="small text-secondary mb-0">
             <span v-if="stall.cuisine">{{ stall.cuisine }}</span>
             <span v-if="stall.cuisine && stall.unitNumber"> · </span>
             <span v-if="stall.unitNumber">#{{ stall.unitNumber }}</span>
+          </p>
+          <p v-if="stall.rating && stall.rating.count > 0" class="small mt-1 mb-0">
+            <StarRating :rating="stall.rating.average" :count="stall.rating.count" />
           </p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-shrink-0">
@@ -139,7 +148,7 @@ function onReported(report) {
       </div>
 
       <RouterLink
-        v-if="showCentre && stall.hawkerCentre?._id"
+        v-if="!statusOnly && showCentre && stall.hawkerCentre?._id"
         class="d-inline-block small mt-2 text-danger"
         :to="`/hawker-centres/${stall.hawkerCentre._id}#stall-${stall._id}`"
       >
@@ -147,6 +156,7 @@ function onReported(report) {
       </RouterLink>
 
       <template v-if="hasLiveData">
+        <StatusBadge v-if="statusOnly && liveReport" :status="liveReport.status" />
         <p v-if="liveReport" class="small text-secondary mt-2 mb-0">
           <i class="bi bi-people me-1" aria-hidden="true"></i>Community update {{ timeAgo(liveReport.createdAt) }}
           · expires {{ timeUntil(liveReport.expiresAt) }}
@@ -224,3 +234,16 @@ function onReported(report) {
     </div>
   </article>
 </template>
+
+<style scoped>
+.stall-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.stall-link:hover,
+.stall-link:focus {
+  color: var(--hw-orange);
+  text-decoration: underline;
+}
+</style>

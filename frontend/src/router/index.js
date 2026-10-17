@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import HawkerCentreView from '../views/HawkerCentreView.vue'
+import StallView from '../views/StallView.vue'
 import FavouritesView from '../views/FavouritesView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import { useAuthStore } from '../stores/useAuthStore.js'
@@ -14,6 +15,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: HomeView },
     { path: '/hawker-centres/:id', component: HawkerCentreView },
+    { path: '/stalls/:id', component: StallView },
     // Loaded only when opened, so the map library isn't downloaded on every page
     { path: '/map', component: () => import('../views/ExploreMapView.vue') },
     { path: '/reports', component: () => import('../views/CommunityReportsView.vue') },

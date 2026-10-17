@@ -1,6 +1,9 @@
 // Fills the database with fictional demo data. Run with: npm run seed
-// Warning: this deletes existing users, centres, stalls, reports, favourites and comments.
+// Warning: this deletes existing users, centres, stalls, reports, favourites and reviews.
 import 'dotenv/config'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
 import { connectDB } from '../config/db.js'
@@ -9,10 +12,14 @@ import HawkerCentre from '../models/HawkerCentre.js'
 import Stall from '../models/Stall.js'
 import StatusReport from '../models/StatusReport.js'
 import Favourite from '../models/Favourite.js'
-import Comment from '../models/Comment.js'
+import Review from '../models/Review.js'
+import ReviewPhoto from '../models/ReviewPhoto.js'
 import ImportLog from '../models/ImportLog.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
 import { passwordProblem } from '../utils/passwordRules.js'
+
+// Sample review photos: simple drawn illustrations (not real photos), stored in scripts/seed-photos
+const PHOTO_FOLDER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'seed-photos')
 
 if (process.env.NODE_ENV === 'production') {
   console.error('Refusing to seed a production database.')
@@ -53,7 +60,7 @@ async function seed() {
 
   await connectDB()
 
-  const seeded = [User, HawkerCentre, Stall, StatusReport, Favourite, Comment]
+  const seeded = [User, HawkerCentre, Stall, StatusReport, Favourite, Review, ReviewPhoto]
   await Promise.all(seeded.map((Model) => Model.deleteMany({})))
   // Make the database indexes match the schemas (ImportLog data is kept).
   await Promise.all([...seeded, ImportLog].map((Model) => Model.syncIndexes()))
@@ -136,11 +143,30 @@ async function seed() {
     }
   ])
 
-  await Comment.create([
-    { hawkerCentre: kampong._id, user: diner._id, text: 'Go before 11:30, the lunch crowd builds quickly.' },
-    { hawkerCentre: kampong._id, user: regular._id, text: 'Plenty of seats on the second floor.' },
-    { hawkerCentre: riverside._id, user: regular._id, text: 'Car park fills up on weekends.' }
-  ])
+  // The demo login has no reviews, so you can try writing one.
+  // `photos` are file names in scripts/seed-photos; they are saved as ReviewPhoto documents below.
+  const sampleReviews = [
+    { stall: chickenRice, user: diner, rating: 5, text: 'Tender chicken and fragrant rice. Worth the queue.', photos: ['chicken-rice-1.jpg', 'chicken-rice-2.jpg'] },
+    { stall: chickenRice, user: regular, rating: 4, text: 'Go before 11:30, the lunch crowd builds quickly.', photos: ['chicken-rice-3.jpg'] },
+    { stall: laksa, user: diner, rating: 3, text: 'Good gravy, but a little too salty for me.', photos: ['laksa-1.jpg'] },
+    { stall: charKwayTeow, user: regular, rating: 4, text: 'Proper wok hei. Ask for extra cockles.', photos: ['char-kway-teow-1.jpg'] },
+    { stall: prawnMee, user: regular, rating: 5, text: '', photos: ['prawn-mee-1.jpg'] },
+    { stall: nasiLemak, user: diner, rating: 4, text: 'Fragrant rice and a good sambal kick.', photos: ['nasi-lemak-1.jpg'] }
+  ]
+
+  for (const sample of sampleReviews) {
+    const review = await Review.create({ stall: sample.stall._id, user: sample.user._id, rating: sample.rating, text: sample.text })
+    for (const fileName of sample.photos) {
+      const photo = await ReviewPhoto.create({
+        review: review._id,
+        stall: sample.stall._id,
+        contentType: 'image/jpeg',
+        data: fs.readFileSync(path.join(PHOTO_FOLDER, fileName))
+      })
+      review.photos.push(photo._id)
+    }
+    await review.save()
+  }
 
   const counts = await Promise.all(seeded.map(async (Model) => `${Model.modelName}: ${await Model.countDocuments()}`))
   console.log(`Seed complete. ${counts.join(', ')}`)

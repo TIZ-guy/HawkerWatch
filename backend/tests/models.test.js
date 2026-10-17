@@ -7,7 +7,7 @@ import HawkerCentre from '../models/HawkerCentre.js'
 import Stall from '../models/Stall.js'
 import StatusReport from '../models/StatusReport.js'
 import Favourite from '../models/Favourite.js'
-import Comment from '../models/Comment.js'
+import Review from '../models/Review.js'
 import { errorHandler } from '../middleware/errorMiddleware.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
 
@@ -57,9 +57,15 @@ test('Favourite rejects invalid alert times and days', () => {
   assert.deepEqual(errorPaths(favourite).sort(), ['alert.days.0', 'alert.time'])
 })
 
-test('Comment text is limited to 500 characters', () => {
-  const comment = new Comment({ hawkerCentre: id(), user: id(), text: 'a'.repeat(501) })
-  assert.deepEqual(errorPaths(comment), ['text'])
+test('Review needs a whole-number rating from 1 to 5, and text is limited to 500 characters', () => {
+  assert.deepEqual(errorPaths(new Review({ stall: id(), user: id(), rating: 4 })), [])
+  assert.deepEqual(errorPaths(new Review({ stall: id(), user: id() })), ['rating'])
+  for (const rating of [0, 6, 3.5]) {
+    assert.deepEqual(errorPaths(new Review({ stall: id(), user: id(), rating })), ['rating'])
+  }
+  assert.deepEqual(errorPaths(new Review({ stall: id(), user: id(), rating: 4, text: 'a'.repeat(501) })), ['text'])
+  const fivePhotos = [id(), id(), id(), id(), id()]
+  assert.deepEqual(errorPaths(new Review({ stall: id(), user: id(), rating: 4, photos: fivePhotos })), ['photos'])
 })
 
 // A tiny stand-in for Express's res object that records what was sent.

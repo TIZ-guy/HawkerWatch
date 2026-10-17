@@ -1,5 +1,5 @@
 <script setup>
-// Centre detail page: official closures, community summary, the centre's stalls and comments.
+// Centre detail page: official closures, community summary and the centre's stalls.
 // A link ending in #stall-<id> (from the home page stall results) scrolls to that stall.
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -11,7 +11,6 @@ import FilterChips from '../components/FilterChips.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FavouriteButton from '../components/FavouriteButton.vue'
-import CommentSection from '../components/CommentSection.vue'
 import { getCommunitySummary, getHawkerCentre, getHawkerCentreStalls } from '../services/hawkerService.js'
 
 const route = useRoute()
@@ -27,7 +26,6 @@ const summaryError = ref('')
 
 const stallSearch = ref('')
 const cuisine = ref('')
-const highlightedStallId = ref('')
 
 const cuisineOptions = computed(() =>
   [...new Set(stalls.value.map((stall) => stall.cuisine).filter(Boolean))]
@@ -110,11 +108,11 @@ async function load(id) {
   scrollToLinkedStall()
 }
 
+// Scrolls to the stall in the link, e.g. when coming back from a stall's own page
 function scrollToLinkedStall() {
   if (!route.hash.startsWith('#stall-')) return
   const element = document.getElementById(route.hash.slice(1))
   if (!element) return
-  highlightedStallId.value = route.hash.slice('#stall-'.length)
   element.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
@@ -184,7 +182,6 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               :id="`stall-${stall._id}`"
               :key="stall._id"
               class="col-md-6 col-xl-4"
-              :class="{ 'stall-highlight': stall._id === highlightedStallId }"
             >
               <StallCard :stall="stall" :centre="centre" @reported="(report) => onStallReported(stall._id, report)" @changed="refreshStatuses" />
             </div>
@@ -194,15 +191,6 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
 
         <div v-else class="alert alert-light border">No stalls have been added for this centre yet.</div>
       </section>
-
-      <CommentSection class="mt-5" :centre-id="centre._id" />
     </template>
   </main>
 </template>
-
-<style scoped>
-.stall-highlight :deep(.card) {
-  outline: 3px solid var(--hw-orange);
-  outline-offset: 2px;
-}
-</style>

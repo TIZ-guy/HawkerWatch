@@ -1,6 +1,6 @@
 // OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
 // When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
-import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, COMMENT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES } from '../utils/constants.js'
+import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 
 const id = (name, description) => ({ name, in: 'path', required: true, description, schema: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60718' } })
@@ -43,7 +43,7 @@ export default {
     { name: 'Stalls' },
     { name: 'Reports', description: `Community status reports. Each expires after ${REPORT_TTL_MINUTES} minutes.` },
     { name: 'Favourites', description: 'Saved stalls and centres, with optional reminder preferences.' },
-    { name: 'Comments', description: 'Comments on a hawker centre. Authors can edit and delete their own; admins can delete any.' }
+    { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' }
   ],
   components: {
     securitySchemes: {
@@ -106,7 +106,8 @@ export default {
           unitNumber: { type: 'string', example: '01-01' },
           cuisine: { type: 'string', example: 'Chicken rice' },
           isActive: { type: 'boolean' },
-          liveReport: ref('LiveReport')
+          liveReport: ref('LiveReport'),
+          rating: ref('Rating')
         }
       },
       Report: {
@@ -129,16 +130,23 @@ export default {
           time: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$', example: '11:30' }
         }
       },
-      Comment: {
+      Review: {
         type: 'object',
         properties: {
           _id: { type: 'string' },
-          hawkerCentre: { type: 'string' },
-          text: { type: 'string', maxLength: COMMENT_MAX_LENGTH, example: 'Go before 11:30, the lunch crowd builds quickly.' },
+          stall: { type: 'string' },
+          rating: { type: 'integer', minimum: 1, maximum: 5, example: 4 },
+          text: { type: 'string', maxLength: REVIEW_TEXT_MAX_LENGTH, example: 'Generous portions, the chilli is great.' },
+          photos: { type: 'array', maxItems: MAX_REVIEW_PHOTOS, description: 'Photo ids; each image is at GET /api/review-photos/{id}', items: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60740' } },
           createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time', description: 'Later than createdAt once the comment has been edited' },
+          editedAt: { type: 'string', format: 'date-time', nullable: true, description: 'When the stars or text were last changed; null if never edited' },
           user: { type: 'object', nullable: true, description: 'The author, or null if their account was deleted', properties: { _id: { type: 'string' }, name: { type: 'string', example: 'Demo Diner' } } }
         }
+      },
+      Rating: {
+        type: 'object',
+        description: 'Average star rating (1 decimal place, null with no reviews) and number of reviews',
+        properties: { average: { type: 'number', nullable: true, example: 4.3 }, count: { type: 'integer', example: 12 } }
       },
       Favourite: {
         type: 'object',
@@ -242,30 +250,6 @@ export default {
       }
     },
 
-    '/api/hawker-centres/{id}/comments': {
-      get: {
-        tags: ['Comments'],
-        summary: "A centre's comments, newest first",
-        parameters: [id('id', 'Centre id')],
-        responses: { 200: ok('Comments', { type: 'array', items: ref('Comment') }), 400: error('Invalid id'), 404: error('Centre not found') }
-      },
-      post: {
-        tags: ['Comments'],
-        summary: 'Comment on a centre',
-        description: `Text is 1 to ${COMMENT_MAX_LENGTH} characters. Each IP can post 10 comments per 15 minutes.`,
-        ...loginRequired,
-        parameters: [id('id', 'Centre id')],
-        requestBody: { required: true, ...json({ type: 'object', required: ['text'], properties: { text: { type: 'string' } } }, { text: 'Plenty of seats on the second floor.' }) },
-        responses: {
-          201: ok('Comment posted', ref('Comment')),
-          400: error('Text missing or too long, or an invalid id'),
-          401: notLoggedIn,
-          404: error('Centre not found'),
-          429: error('Too many comments')
-        }
-      }
-    },
-
     '/api/stalls': {
       get: {
         tags: ['Stalls'],
@@ -275,10 +259,38 @@ export default {
       }
     },
     '/api/stalls/{id}': {
-      get: { tags: ['Stalls'], summary: 'Get one stall with its newest live report', parameters: [id('id', 'Stall id')], responses: { 200: ok('Stall', ref('Stall')), 404: error('Not found') } }
+      get: { tags: ['Stalls'], summary: 'Get one stall with its newest live report, rating, and the centre location and closures', parameters: [id('id', 'Stall id')], responses: { 200: ok('Stall', ref('Stall')), 404: error('Not found') } }
     },
     '/api/stalls/{id}/reports': {
       get: { tags: ['Stalls'], summary: "A stall's live reports, newest first", parameters: [id('id', 'Stall id')], responses: { 200: ok('Reports', { type: 'array', items: ref('LiveReport') }), 404: error('Stall not found') } }
+    },
+    '/api/stalls/{id}/reviews': {
+      get: {
+        tags: ['Reviews'],
+        summary: "A stall's average rating and reviews, newest first",
+        parameters: [id('id', 'Stall id')],
+        responses: {
+          200: ok('Reviews', { type: 'object', properties: { average: { type: 'number', nullable: true, example: 4.3 }, count: { type: 'integer', example: 2 }, reviews: { type: 'array', items: ref('Review') } } }),
+          400: error('Invalid id'),
+          404: error('Stall not found')
+        }
+      },
+      post: {
+        tags: ['Reviews'],
+        summary: 'Review a stall',
+        description: `rating is a whole number from 1 to 5; text is optional, up to ${REVIEW_TEXT_MAX_LENGTH} characters. One review per user per stall. Each IP can post 10 reviews per 15 minutes.`,
+        ...loginRequired,
+        parameters: [id('id', 'Stall id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['rating'], properties: { rating: { type: 'integer', minimum: 1, maximum: 5 }, text: { type: 'string' } } }, { rating: 4, text: 'Generous portions, the chilli is great.' }) },
+        responses: {
+          201: ok('Review posted', ref('Review')),
+          400: error('Invalid rating, text or id'),
+          401: notLoggedIn,
+          404: error('Stall not found'),
+          409: error('Already reviewed this stall'),
+          429: error('Too many reviews')
+        }
+      }
     },
 
     '/api/reports': {
@@ -376,31 +388,76 @@ export default {
       }
     },
 
-    '/api/comments/{id}': {
+    '/api/reviews/{id}': {
       patch: {
-        tags: ['Comments'],
-        summary: 'Edit your comment',
+        tags: ['Reviews'],
+        summary: 'Edit your review',
         ...loginRequired,
-        parameters: [id('id', 'Comment id')],
-        requestBody: { required: true, ...json({ type: 'object', required: ['text'], properties: { text: { type: 'string' } } }, { text: 'Plenty of seats on the second floor after 2pm.' }) },
+        parameters: [id('id', 'Review id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['rating'], properties: { rating: { type: 'integer', minimum: 1, maximum: 5 }, text: { type: 'string' } } }, { rating: 5, text: 'Even better on a second visit.' }) },
         responses: {
-          200: ok('Comment updated', ref('Comment')),
-          400: error('Text missing or too long, or an invalid id'),
+          200: ok('Review updated', ref('Review')),
+          400: error('Invalid rating, text or id'),
           401: notLoggedIn,
-          403: error('Not your comment'),
-          404: error('Comment not found')
+          403: error('Not your review'),
+          404: error('Review not found')
         }
       },
       delete: {
-        tags: ['Comments'],
-        summary: 'Delete a comment (yours, or any comment as an admin)',
+        tags: ['Reviews'],
+        summary: 'Delete a review (yours, or any review as an admin)',
         ...loginRequired,
-        parameters: [id('id', 'Comment id')],
+        parameters: [id('id', 'Review id')],
         responses: {
           200: ok('Deleted', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60721' } }),
           401: notLoggedIn,
-          403: error('Not your comment, and not an admin'),
-          404: error('Comment not found')
+          403: error('Not your review, and not an admin'),
+          404: error('Review not found')
+        }
+      }
+    },
+    '/api/reviews/{id}/photos': {
+      post: {
+        tags: ['Reviews'],
+        summary: 'Add photos to your review',
+        description: `Send multipart/form-data with the images in the field \`photos\`. JPEG, PNG or WebP, up to 2 MB each, at most ${MAX_REVIEW_PHOTOS} per review. Each IP can upload 20 times per 15 minutes.`,
+        ...loginRequired,
+        parameters: [id('id', 'Review id')],
+        requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', properties: { photos: { type: 'array', items: { type: 'string', format: 'binary' } } } } } } },
+        responses: {
+          201: ok('Photos added; the updated review', ref('Review')),
+          400: error('No photos, not an image, too big, or too many'),
+          401: notLoggedIn,
+          403: error('Not your review'),
+          404: error('Review not found'),
+          429: error('Too many uploads')
+        }
+      }
+    },
+    '/api/reviews/{id}/photos/{photoId}': {
+      delete: {
+        tags: ['Reviews'],
+        summary: 'Remove a photo from a review (yours, or any review as an admin)',
+        ...loginRequired,
+        parameters: [id('id', 'Review id'), id('photoId', 'Photo id')],
+        responses: {
+          200: ok('Removed', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60740' } }),
+          401: notLoggedIn,
+          403: error('Not your review, and not an admin'),
+          404: error('Review or photo not found')
+        }
+      }
+    },
+
+    '/api/review-photos/{id}': {
+      get: {
+        tags: ['Reviews'],
+        summary: 'A review photo (the image itself, for <img src>)',
+        parameters: [id('id', 'Photo id')],
+        responses: {
+          200: { description: 'The image', content: { 'image/jpeg': {}, 'image/png': {}, 'image/webp': {} } },
+          400: error('Invalid id'),
+          404: error('Photo not found')
         }
       }
     }

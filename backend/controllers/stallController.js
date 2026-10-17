@@ -1,5 +1,5 @@
 import Stall from '../models/Stall.js';
-import { contains, getLiveReports } from '../utils/hawkerUtils.js';
+import { contains, getLiveReports, getRatings, ratingFor } from '../utils/hawkerUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -8,6 +8,7 @@ import { contains, getLiveReports } from '../utils/hawkerUtils.js';
 // ============================================================
 // GET /api/stalls
 // Optional query: search, cuisine
+// Each stall has its star rating as rating: { average, count }.
 // ============================================================
 
 export const getStalls = async (req, res, next) => {
@@ -27,7 +28,14 @@ export const getStalls = async (req, res, next) => {
             .sort({ name: 1 })
             .lean();
 
-        res.status(200).json({ success: true, data: stalls });
+        const ratings = await getRatings(stalls.map(stall => stall._id));
+
+        const data = stalls.map(stall => ({
+            ...stall,
+            rating: ratingFor(ratings, stall._id)
+        }));
+
+        res.status(200).json({ success: true, data });
     } catch (error) {
         next(error);
     }
@@ -36,14 +44,16 @@ export const getStalls = async (req, res, next) => {
 
 // ============================================================
 // GET /api/stalls/:id
-// Includes the newest live community report as liveReport (or null).
+// Includes the newest live community report as liveReport (or null), the star rating
+// as rating: { average, count }, and the centre's location and official closures
+// (the stall page shows the closures, and the report form checks the distance).
 // ============================================================
 
 export const getStallById = async (req, res, next) => {
     try {
         const stall = await Stall
             .findById(req.params.id)
-            .populate('hawkerCentre', 'name address')
+            .populate('hawkerCentre', 'name address postalCode location closures')
             .lean();
 
         if (!stall) {
@@ -52,10 +62,15 @@ export const getStallById = async (req, res, next) => {
         }
 
         const reports = await getLiveReports({ stall: stall._id });
+        const ratings = await getRatings([stall._id]);
 
         res.status(200).json({
             success: true,
-            data: { ...stall, liveReport: reports[0] || null } // reports are newest first
+            data: {
+                ...stall,
+                liveReport: reports[0] || null, // reports are newest first
+                rating: ratingFor(ratings, stall._id)
+            }
         });
     } catch (error) {
         next(error);

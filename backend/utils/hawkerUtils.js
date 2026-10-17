@@ -1,4 +1,5 @@
 import StatusReport from '../models/StatusReport.js';
+import Review from '../models/Review.js';
 import { FLAG_HIDE_THRESHOLD } from './reportUtils.js';
 
 // Small helpers shared by the hawker-centre and stall controllers.
@@ -36,4 +37,26 @@ export function latestReportPerStall(reports) {
         }
     }
     return latest;
+}
+
+
+// Average star rating and number of reviews for each stall in `stallIds`.
+// Returns an object of stallId -> { average, count }. Stalls with no reviews are left out.
+// average is rounded to 1 decimal place, e.g. 4.3
+export async function getRatings(stallIds) {
+    const groups = await Review.aggregate([
+        { $match: { stall: { $in: stallIds } } },
+        { $group: { _id: '$stall', average: { $avg: '$rating' }, count: { $sum: 1 } } }
+    ]);
+
+    const ratings = {};
+    for (const group of groups) {
+        ratings[String(group._id)] = { average: Math.round(group.average * 10) / 10, count: group.count };
+    }
+    return ratings;
+}
+
+// The rating to send for one stall: { average, count }, or { average: null, count: 0 } with no reviews.
+export function ratingFor(ratings, stallId) {
+    return ratings[String(stallId)] || { average: null, count: 0 };
 }
