@@ -39,6 +39,7 @@ flowchart LR
 | Official NEA closure import | Placeholder script only |
 | OneMap address search | Backend stub only |
 | Centre comments: post, edit and delete your own; admins can delete any | Done |
+| Two-factor login (optional): authenticator-app codes, turned on and off from the Profile page | Done |
 | Deployment (Vercel + Render/Railway) | Not started |
 
 The app is designed for desktop browsers. Layouts also adapt to small screens, but phone support is not tested and is outside the current scope.
@@ -68,7 +69,7 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `npm run dev`: run frontend and backend together
 - `npm run build`: build the frontend
 - `npm test`: run backend tests
-- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports, a demo login, and a demo login with two-factor login on). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
 - `npm run import:closures`: import official closure data (placeholder, Phase 4)
 
 ## Trying the frontend

@@ -58,6 +58,7 @@ export default {
           name: { type: 'string', example: 'Demo Diner' },
           email: { type: 'string', example: 'diner@example.com' },
           role: { type: 'string', enum: ['user', 'admin'] },
+          twoFactorEnabled: { type: 'boolean', example: false },
           createdAt: { type: 'string', format: 'date-time' }
         }
       },
@@ -199,6 +200,51 @@ export default {
         ...loginRequired,
         requestBody: { required: true, ...json({ type: 'object', required: ['currentPassword', 'newPassword'] }, { currentPassword: 'Hawker#Run1', newPassword: 'Hawker#Run2' }) },
         responses: { 200: ok('Password changed', { type: 'object' }), 400: error('Wrong current password or the new one breaks a rule'), 401: notLoggedIn }
+      }
+    },
+    '/api/auth/login/2fa': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Log in, step 2: two-factor code',
+        description: 'For accounts with two-factor login on. POST /api/auth/login answers `{ twoFactorRequired: true, challengeToken }` instead of setting the cookie; send that token (valid 5 minutes) with the 6-digit code from the authenticator app. Wrong codes count towards the failed-login limit.',
+        requestBody: { required: true, ...json({ type: 'object', required: ['challengeToken', 'code'] }, { challengeToken: 'eyJhbGciOi...', code: '123456' }) },
+        responses: {
+          200: ok('Logged in; login cookie set', { type: 'object', properties: { user: ref('User') } }),
+          400: error('Code missing'),
+          401: error('Wrong code, or the challenge token expired'),
+          429: error('Too many failed attempts')
+        }
+      }
+    },
+    '/api/auth/2fa/setup': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Start turning on two-factor login',
+        description: 'Returns a QR code (PNG data URL) and secret for an authenticator app. Two-factor login stays off until POST /api/auth/2fa/enable gets a correct code.',
+        ...loginRequired,
+        responses: {
+          200: ok('Setup details', { type: 'object', properties: { secret: { type: 'string' }, otpauthUrl: { type: 'string' }, qrCode: { type: 'string' } } }),
+          400: error('Already on'),
+          401: notLoggedIn
+        }
+      }
+    },
+    '/api/auth/2fa/enable': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Turn on two-factor login',
+        ...loginRequired,
+        requestBody: { required: true, ...json({ type: 'object', required: ['code'] }, { code: '123456' }) },
+        responses: { 200: ok('Two-factor login on', { type: 'object', properties: { user: ref('User') } }), 400: error('Wrong code, setup not started, or already on'), 401: notLoggedIn }
+      }
+    },
+    '/api/auth/2fa/disable': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Turn off two-factor login',
+        ...loginRequired,
+        requestBody: { required: true, ...json({ type: 'object', required: ['password', 'code'] }, { password: 'Hawker#Run1', code: '123456' }) },
+        responses: { 200: ok('Two-factor login off', { type: 'object', properties: { user: ref('User') } }), 400: error('Wrong password or code, or already off'), 401: notLoggedIn }
       }
     },
     '/api/auth/logout': {

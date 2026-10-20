@@ -11,9 +11,48 @@ export async function register({ name, email, password }) {
   }
 }
 
+// Returns { user } when logged in, or { twoFactorRequired: true, challengeToken } when the account
+// has two-factor login on and loginTwoFactor() must be called next with a code.
 export async function login({ email, password }) {
   try {
     const response = await axios.post(`${API_URL}/auth/login`, { email, password })
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function loginTwoFactor({ challengeToken, code }) {
+  try {
+    const response = await axios.post(`${API_URL}/auth/login/2fa`, { challengeToken, code })
+    return response.data.data.user
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+// Returns { secret, otpauthUrl, qrCode } for the authenticator app.
+export async function startTwoFactorSetup() {
+  try {
+    const response = await axios.post(`${API_URL}/auth/2fa/setup`)
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function enableTwoFactor({ code }) {
+  try {
+    const response = await axios.post(`${API_URL}/auth/2fa/enable`, { code })
+    return response.data.data.user
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
+export async function disableTwoFactor({ password, code }) {
+  try {
+    const response = await axios.post(`${API_URL}/auth/2fa/disable`, { password, code })
     return response.data.data.user
   } catch (error) {
     throw toError(error)

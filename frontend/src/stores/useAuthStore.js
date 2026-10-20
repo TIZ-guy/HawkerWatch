@@ -21,8 +21,23 @@ function loadCurrentUser() {
   return checking
 }
 
+// Returns { twoFactorRequired: true, challengeToken } when a code is still needed (see loginTwoFactor).
 async function login(credentials) {
-  state.user = await authService.login(credentials)
+  const result = await authService.login(credentials)
+  if (result.user) state.user = result.user
+  return result
+}
+
+async function loginTwoFactor(details) {
+  state.user = await authService.loginTwoFactor(details)
+}
+
+async function enableTwoFactor(code) {
+  state.user = await authService.enableTwoFactor({ code })
+}
+
+async function disableTwoFactor(details) {
+  state.user = await authService.disableTwoFactor(details)
 }
 
 async function register(details) {
@@ -43,5 +58,8 @@ async function logout() {
 }
 
 export function useAuthStore() {
-  return { state: readonly(state), loadCurrentUser, login, register, updateName, changePassword, logout }
+  return {
+    state: readonly(state), loadCurrentUser, login, loginTwoFactor, register, updateName, changePassword, logout,
+    startTwoFactorSetup: authService.startTwoFactorSetup, enableTwoFactor, disableTwoFactor
+  }
 }

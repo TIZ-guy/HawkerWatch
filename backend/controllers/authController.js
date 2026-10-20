@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import { AUTH_COOKIE, signToken, cookieOptions, cookieMaxAge } from '../utils/authToken.js'
 import { passwordProblem } from '../utils/passwordRules.js'
+import { checkCode, signChallenge, verifyChallenge } from '../utils/twoFactor.js'
 
 const SALT_ROUNDS = 10
 
@@ -67,6 +68,27 @@ export async function login(req, res) {
 
   // Same message either way, so the response doesn't reveal which emails have accounts.
   if (!passwordMatches) throw httpError(401, 'Invalid email or password')
+
+  // With 2FA on, the password alone isn't enough: no cookie yet, the user must send a code next.
+  if (user.twoFactorEnabled) {
+    return res.json({ success: true, data: { twoFactorRequired: true, challengeToken: signChallenge(user) } })
+  }
+
+  sendLoggedIn(res, 200, user)
+}
+
+// POST /api/auth/login/2fa  { challengeToken, code }
+// Second step of logging in for users with 2FA: the challengeToken from POST /login plus the app's code.
+export async function loginTwoFactor(req, res) {
+  const { challengeToken, code } = req.body || {}
+  if (!isText(challengeToken) || !isText(code)) throw httpError(400, 'Code is required')
+
+  const userId = verifyChallenge(challengeToken)
+  if (!userId) throw httpError(401, 'Your login has timed out, please enter your password again')
+
+  const user = await User.findById(userId).select('+twoFactorSecret')
+  if (!user || !user.twoFactorEnabled) throw httpError(401, 'Please log in again')
+  if (!checkCode(code, user.twoFactorSecret)) throw httpError(401, 'That code is wrong or has expired')
 
   sendLoggedIn(res, 200, user)
 }

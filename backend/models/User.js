@@ -14,13 +14,18 @@ const userSchema = new mongoose.Schema(
     },
     // select: false keeps the hash out of query results unless asked for with .select('+passwordHash')
     passwordHash: { type: String, required: true, select: false },
-    role: { type: String, enum: ROLES, default: 'user' }
+    role: { type: String, enum: ROLES, default: 'user' },
+    // Two-factor login with an authenticator app. The secret is saved when setup starts,
+    // but only used for logins once twoFactorEnabled is true (after the user types a correct code).
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, select: false }
   },
   {
     timestamps: true,
     toJSON: {
       transform: (_doc, ret) => {
         delete ret.passwordHash
+        delete ret.twoFactorSecret
         return ret
       }
     }
