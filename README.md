@@ -42,6 +42,7 @@ flowchart LR
 | Centre comments: post, edit and delete your own; admins can delete any | Done |
 | Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
 | Review photos: up to 4 per review (shrunk in the browser, stored in MongoDB); a self-scrolling slideshow on the stall page links each photo to its review | Done |
+| Two-factor login (optional): authenticator-app codes, turned on and off from the Profile page | Done |
 | Deployment (Vercel + Render/Railway) | Not started |
 
 The app is designed for desktop browsers. Layouts also adapt to small screens, but phone support is not tested and is outside the current scope.
@@ -71,7 +72,7 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `npm run dev`: run frontend and backend together
 - `npm run build`: build the frontend
 - `npm test`: run backend tests
-- `npm run seed`: replace the database contents with fictional demo data, then import the real NEA centres (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `npm run seed`: replace the database contents with fictional demo data, then import the real NEA centres (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, a demo login, and a demo login with two-factor login on). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
 - `npm run import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
 
 ## Trying the frontend

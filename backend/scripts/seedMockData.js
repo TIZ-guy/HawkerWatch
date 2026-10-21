@@ -40,6 +40,15 @@ const DEMO_LOGIN = {
   password: process.env.SEED_DEMO_PASSWORD || 'Hawker#Run1'
 }
 
+// A second login with two-factor login already on, for testing the code step.
+// Add the key to an authenticator app (+ > Enter a setup key) to get its codes.
+// The key is public in this file, so this account is for local testing only.
+const TWO_FACTOR_LOGIN = {
+  name: 'Demo 2FA User',
+  email: 'demo2fa@example.com',
+  secret: 'HAWKERWATCHDEMO2'
+}
+
 const MINUTE = 60 * 1000
 const minutesAgo = (minutes) => new Date(Date.now() - minutes * MINUTE)
 const daysFromNow = (days) => new Date(Date.now() + days * 24 * 60 * MINUTE)
@@ -72,7 +81,14 @@ async function seed() {
     { name: 'Demo Diner', email: 'diner@example.com', passwordHash: NO_LOGIN_HASH },
     { name: 'Demo Regular', email: 'regular@example.com', passwordHash: NO_LOGIN_HASH },
     { name: 'Demo Admin', email: 'admin@example.com', passwordHash: NO_LOGIN_HASH, role: 'admin' },
-    { name: DEMO_LOGIN.name, email: DEMO_LOGIN.email, passwordHash: await bcrypt.hash(DEMO_LOGIN.password, 10) }
+    { name: DEMO_LOGIN.name, email: DEMO_LOGIN.email, passwordHash: await bcrypt.hash(DEMO_LOGIN.password, 10) },
+    {
+      name: TWO_FACTOR_LOGIN.name,
+      email: TWO_FACTOR_LOGIN.email,
+      passwordHash: await bcrypt.hash(DEMO_LOGIN.password, 10),
+      twoFactorEnabled: true,
+      twoFactorSecret: TWO_FACTOR_LOGIN.secret
+    }
   ])
 
   const [kampong, riverside, seaside] = await HawkerCentre.create([
@@ -188,7 +204,9 @@ async function seed() {
 
   const counts = await Promise.all(seeded.map(async (Model) => `${Model.modelName}: ${await Model.countDocuments()}`))
   console.log(`Seed complete. ${counts.join(', ')}`)
-  console.log(`Log in with ${DEMO_LOGIN.email} / ${process.env.SEED_DEMO_PASSWORD ? '(your SEED_DEMO_PASSWORD)' : DEMO_LOGIN.password}`)
+  const password = process.env.SEED_DEMO_PASSWORD ? '(your SEED_DEMO_PASSWORD)' : DEMO_LOGIN.password
+  console.log(`Log in with ${DEMO_LOGIN.email} / ${password}`)
+  console.log(`Two-factor test: ${TWO_FACTOR_LOGIN.email} / ${password}, authenticator key ${TWO_FACTOR_LOGIN.secret}`)
 }
 
 seed()

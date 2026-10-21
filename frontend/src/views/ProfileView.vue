@@ -1,5 +1,5 @@
 <script setup>
-// Account details, name and password changes, and favourite reminders (logged-in users only).
+// Account details, name and password changes, two-factor login, and favourite reminders (logged-in users only).
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FavouriteAlertEditor from '../components/FavouriteAlertEditor.vue'
@@ -7,6 +7,7 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import PasswordInput from '../components/PasswordInput.vue'
 import PasswordChecklist from '../components/PasswordChecklist.vue'
+import TwoFactorSettings from '../components/TwoFactorSettings.vue'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useFavouriteStore } from '../stores/useFavouriteStore.js'
 import { meetsPasswordRules } from '../utils/passwordRules.js'
@@ -157,6 +158,8 @@ onMounted(async () => {
             </div>
           </form>
         </section>
+
+        <TwoFactorSettings />
       </div>
 
       <section id="alerts" class="col-lg-7" aria-labelledby="alerts-heading">
