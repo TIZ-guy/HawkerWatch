@@ -1,4 +1,5 @@
-// Fills the database with fictional demo data. Run with: npm run seed
+// Fills the database with fictional demo data, then imports the real NEA hawker centres and closures
+// from data.gov.sg (skipped with a warning when offline). Run with: npm run seed
 // Warning: this deletes existing users, centres, stalls, reports, favourites, reviews and comments.
 import 'dotenv/config'
 import fs from 'fs'
@@ -14,6 +15,7 @@ import StatusReport from '../models/StatusReport.js'
 import Favourite from '../models/Favourite.js'
 import Review from '../models/Review.js'
 import ReviewPhoto from '../models/ReviewPhoto.js'
+import { importHawkerCentres } from '../services/hawkerImportService.js'
 import Comment from '../models/Comment.js'
 import ImportLog from '../models/ImportLog.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
@@ -174,6 +176,15 @@ async function seed() {
     { hawkerCentre: kampong._id, user: regular._id, text: 'Plenty of seats on the second floor.' },
     { hawkerCentre: riverside._id, user: regular._id, text: 'Car park fills up on weekends.' }
   ])
+
+  // The real centres and closures, next to the demo ones (which are marked "Demo" / "Sample" in their names)
+  console.log('Importing real hawker centres from data.gov.sg...')
+  const imported = await importHawkerCentres()
+  if (imported.status === 'FAILED') {
+    console.warn(`Real hawker centres not imported (${imported.errorMessage}). Run npm run import:centres when online.`)
+  } else {
+    console.log(`Imported ${imported.recordsCreated + imported.recordsUpdated} real hawker centres.`)
+  }
 
   const counts = await Promise.all(seeded.map(async (Model) => `${Model.modelName}: ${await Model.countDocuments()}`))
   console.log(`Seed complete. ${counts.join(', ')}`)

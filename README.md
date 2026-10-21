@@ -36,7 +36,8 @@ flowchart LR
 | Distance filters: All / 1 / 5 / 10 km on Explore Map and the home page Near me | Done |
 | Community report flagging: Flag button in each stall's recent updates; 3 flags hide a report everywhere | Done |
 | Interactive API docs at `/api/docs` | Done |
-| Official NEA closure import | Placeholder script only |
+| Official NEA data: all 123 hawker centres (address, location, photo, stall count) and their closures, imported from data.gov.sg and refreshed weekly | Done |
+| Stalls added by users (no official stall list exists); the person who added a stall or an admin can edit it, admins can remove it | Done |
 | OneMap address search | Backend stub only |
 | Centre comments: post, edit and delete your own; admins can delete any | Done |
 | Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
@@ -70,8 +71,8 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `npm run dev`: run frontend and backend together
 - `npm run build`: build the frontend
 - `npm test`: run backend tests
-- `npm run seed`: replace the database contents with fictional demo data (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
-- `npm run import:closures`: import official closure data (placeholder, Phase 4)
+- `npm run seed`: replace the database contents with fictional demo data, then import the real NEA centres (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, and a demo login). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `npm run import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
 
 ## Trying the frontend
 
@@ -118,9 +119,12 @@ With `npm run dev` running, open **http://localhost:5173/api/docs** for an inter
 | GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first |
 | GET | `/api/hawker-centres/:id` | Includes official `closures` |
 | GET | `/api/hawker-centres/:id/stalls` | Optional `search`, `cuisine`; each stall has its newest live report as `liveReport` and its star rating as `rating: { average, count }` |
+| POST | `/api/hawker-centres/:id/stalls` | `{ name, cuisine, unitNumber }` (cuisine and unit number optional, unit like `01-23`); login required; 409 for a name or unit number already used there; rate limited |
 | GET | `/api/hawker-centres/:id/community-summary` | Live report counts by status |
 | GET | `/api/stalls` | Optional `search`, `cuisine`; includes the stall's centre name and address, and `rating` |
-| GET | `/api/stalls/:id` | Includes `liveReport`, `rating`, and the centre's location and official closures |
+| GET | `/api/stalls/:id` | Includes `liveReport`, `rating`, and the centre's location and official closures; 404 once removed |
+| PATCH | `/api/stalls/:id` | Any of `{ name, cuisine, unitNumber }`; login required; the person who added it or an admin |
+| DELETE | `/api/stalls/:id` | Admins only; hides the stall (its reviews are kept) |
 | GET | `/api/stalls/:id/reports` | Live reports, newest first |
 | GET | `/api/favourites` | Login required; the user's favourites with the stall or centre filled in |
 | POST | `/api/favourites` | `{ targetType: 'Stall' or 'HawkerCentre', target }`; 409 if already saved |
@@ -135,6 +139,7 @@ With `npm run dev` running, open **http://localhost:5173/api/docs** for an inter
 | POST | `/api/stalls/:id/reviews` | `{ rating: 1-5, text (optional, up to 500 characters) }`; login required; one review per user per stall (409); rate limited |
 | PATCH | `/api/reviews/:id` | `{ rating, text }`; login required; author only |
 | DELETE | `/api/reviews/:id` | Login required; author or admin; also deletes the review's photos |
+| POST | `/api/admin/import-centres` | Admins only; imports the NEA centres and closures now |
 | POST | `/api/reviews/:id/photos` | `multipart/form-data` with images in `photos`; JPEG, PNG or WebP, up to 2 MB each, 4 per review; login required; author only; rate limited |
 | DELETE | `/api/reviews/:id/photos/:photoId` | Login required; author or admin |
 | GET | `/api/review-photos/:id` | The image itself, for `<img src>` |
@@ -155,4 +160,4 @@ Live stall status and queue estimates are community submitted, time-stamped, may
 
 Build `frontend` with Vite and deploy it to Vercel. Deploy `backend` to Render or Railway with the environment variables from `backend/.env.example`. Use MongoDB Atlas for hosted persistence. Never commit `.env` files or production credentials.
 
-For the development-only import routes planned in a later phase, configure `ADMIN_IMPORT_KEY` and send it in the documented request header. No production secret is included in this repository.
+Official hawker centre data comes from NEA's [Dates of Hawker Centres Closure](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) dataset on data.gov.sg, which needs no API key. Admins can refresh it with `POST /api/admin/import-centres`. No production secret is included in this repository.

@@ -9,7 +9,7 @@
     "test": "npm test --prefix backend",
     "build": "npm run build --prefix frontend",
     "seed": "npm run seed --prefix backend",
-    "import:closures": "npm run import:closures --prefix backend"
+    "import:centres": "npm run import:centres --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

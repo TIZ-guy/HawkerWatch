@@ -8,7 +8,7 @@
     "start": "node server.js",
     "test": "node --test",
     "seed": "node scripts/seedMockData.js",
-    "import:closures": "node scripts/importHawkerClosures.js"
+    "import:centres": "node scripts/importHawkerClosures.js"
   },
   "dependencies": {
     "axios": "^1.20.0",

@@ -1,5 +1,5 @@
 <script setup>
-// Centre summary for lists: name, address, official closure badge and optional distance.
+// Centre summary for lists: NEA photo, name, address, official closure badge and optional distance.
 import ClosureBadge from './ClosureBadge.vue'
 import FavouriteButton from './FavouriteButton.vue'
 import { formatDistance } from '../services/locationService.js'
@@ -11,7 +11,8 @@ defineProps({
 </script>
 
 <template>
-  <article class="card border-0 shadow-sm h-100 centre-card">
+  <article class="card border-0 shadow-sm h-100 centre-card overflow-hidden">
+    <img v-if="centre.photoUrl" :src="centre.photoUrl" alt="" class="card-img-top centre-photo" loading="lazy" />
     <div class="card-body p-4 d-flex flex-column">
       <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
         <div class="d-flex flex-wrap gap-2">
@@ -40,6 +41,13 @@ defineProps({
 </template>
 
 <style scoped>
+/* Decorative (alt=""): the name below says which centre it is */
+.centre-photo {
+  height: 140px;
+  object-fit: cover;
+  background: #eee;
+}
+
 .centre-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }

@@ -4,11 +4,13 @@ import rateLimit from 'express-rate-limit';
 import {
     getStalls,
     getStallById,
-    getStallReports
+    getStallReports,
+    updateStall,
+    removeStall
 } from '../controllers/stallController.js';
 import { getStallReviews, addReview } from '../controllers/reviewController.js';
 // Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, requireRole } from '../middleware/authMiddleware.js';
 
 // Stops review spam: each IP can post a limited number of reviews per window
 const reviewLimiter = rateLimit({
@@ -24,6 +26,10 @@ const router = express.Router(); // sub application, mounted at /api/stalls
 router.get('/', getStalls);
 
 router.get('/:id', getStallById);
+
+router.patch('/:id', protect, updateStall); // the person who added it, or an admin (checked in the controller)
+
+router.delete('/:id', protect, requireRole('admin'), removeStall);
 
 router.get('/:id/reports', getStallReports);
 

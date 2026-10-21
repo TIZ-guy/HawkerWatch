@@ -27,7 +27,7 @@ The browser then keeps the login cookie and sends it with the other requests on 
 |---|---|---|---|
 | [OneMap](https://www.onemap.gov.sg/apidocs/) map tiles (Singapore Land Authority) | The Explore Map basemap | Frontend, \`MapView.vue\`; public tiles, no token | In use |
 | [OneMap](https://www.onemap.gov.sg/apidocs/) search API | Turning a postal code or address into coordinates | Backend only, \`services/oneMapService.js\`; needs \`ONEMAP_TOKEN\` | Planned (stub ready) |
-| [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) | Official hawker centre cleaning and works closures | Backend import, \`npm run import:closures\` | Planned |
+| [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) | Every hawker centre (name, address, location, photo, stall count) and its cleaning and works closures | Backend import, \`npm run import:centres\`; the server also refreshes it on start-up when it is over a week old | In use |
 | Google Maps | "Directions" link on each centre page | Frontend link only; no API call | In use |
 | MongoDB Atlas | Database | Backend, \`MONGO_URI\` | In use |
 `
@@ -40,11 +40,13 @@ export default {
     { name: 'Health' },
     { name: 'Auth', description: 'Accounts and login. Login uses an httpOnly cookie called `token`.' },
     { name: 'Hawker centres', description: 'Centres with official NEA closures, their stalls and community summaries.' },
-    { name: 'Stalls' },
+    { name: 'Stalls', description: 'No official stall list exists, so stalls are added by logged-in users. The person who added a stall, or an admin, can edit it; admins can remove it.' },
     { name: 'Reports', description: `Community status reports. Each expires after ${REPORT_TTL_MINUTES} minutes.` },
     { name: 'Favourites', description: 'Saved stalls and centres, with optional reminder preferences.' },
-    { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' },
-    { name: 'Comments', description: 'Comments on a hawker centre. Authors can edit and delete their own; admins can delete any.' }
+    { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' }
+,
+    { name: 'Comments', description: 'Comments on a hawker centre. Authors can edit and delete their own; admins can delete any.' },
+    { name: 'Admin', description: 'Admin-only tools.' }
   ],
   components: {
     securitySchemes: {
@@ -86,9 +88,13 @@ export default {
         type: 'object',
         properties: {
           _id: { type: 'string' },
-          name: { type: 'string', example: 'Kampong Demo Food Centre' },
-          address: { type: 'string', example: '1 Demo Road' },
-          postalCode: { type: 'string', example: '100001' },
+          name: { type: 'string', example: 'Adam Road Food Centre' },
+          address: { type: 'string', example: '2, Adam Road' },
+          postalCode: { type: 'string', example: '289876' },
+          description: { type: 'string', example: 'Built in 1974, Adam Food Centre comprises 32 cooked food stalls.' },
+          photoUrl: { type: 'string', example: 'https://www.nea.gov.sg/images/default-source/Hawker-Centres-Division/resize_1267437914368.jpg' },
+          foodStallCount: { type: 'integer', example: 32, description: 'Cooked food stalls, according to NEA' },
+          sourceId: { type: 'string', example: '1', description: 'NEA serial number; missing on centres added by hand' },
           location: {
             type: 'object',
             description: 'GeoJSON point: coordinates are [longitude, latitude]',
@@ -118,6 +124,7 @@ export default {
           unitNumber: { type: 'string', example: '01-01' },
           cuisine: { type: 'string', example: 'Chicken rice' },
           isActive: { type: 'boolean' },
+          addedBy: { type: 'string', description: 'Id of the user who added the stall' },
           liveReport: ref('LiveReport'),
           rating: ref('Rating')
         }
@@ -248,6 +255,22 @@ export default {
         summary: "A centre's active stalls, each with its newest live report",
         parameters: [id('id', 'Centre id'), query('search', 'Part of the stall name'), query('cuisine', 'Part of the cuisine')],
         responses: { 200: ok('Stalls', { type: 'array', items: ref('Stall') }), 404: error('Centre not found') }
+      },
+      post: {
+        tags: ['Stalls'],
+        summary: 'Add a stall to a centre',
+        description: 'Unit numbers look like 01-23 (a leading # is fine). Names and unit numbers must be unique within the centre. Each IP can add 10 stalls per 15 minutes.',
+        ...loginRequired,
+        parameters: [id('id', 'Centre id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['name'], properties: { name: { type: 'string', minLength: 2, maxLength: 60 }, cuisine: { type: 'string', maxLength: 40 }, unitNumber: { type: 'string', example: '01-23' } } }, { name: 'Ah Hock Chicken Rice', cuisine: 'Chicken rice', unitNumber: '01-23' }) },
+        responses: {
+          201: ok('Stall added', ref('Stall')),
+          400: error('Name missing or too long, bad unit number, or an invalid id'),
+          401: notLoggedIn,
+          404: error('Centre not found'),
+          409: error('A stall with that name or unit number already exists here'),
+          429: error('Too many stalls added')
+        }
       }
     },
     '/api/hawker-centres/{id}/community-summary': {
@@ -295,7 +318,36 @@ export default {
       }
     },
     '/api/stalls/{id}': {
-      get: { tags: ['Stalls'], summary: 'Get one stall with its newest live report, rating, and the centre location and closures', parameters: [id('id', 'Stall id')], responses: { 200: ok('Stall', ref('Stall')), 404: error('Not found') } }
+      get: { tags: ['Stalls'], summary: 'Get one stall with its newest live report, rating, and the centre location and closures', parameters: [id('id', 'Stall id')], responses: { 200: ok('Stall', ref('Stall')), 404: error('Not found, or removed') } },
+      patch: {
+        tags: ['Stalls'],
+        summary: "Change a stall's details (the person who added it, or an admin)",
+        description: 'Send only the fields to change. An empty cuisine or unitNumber clears it.',
+        ...loginRequired,
+        parameters: [id('id', 'Stall id')],
+        requestBody: { required: true, ...json({ type: 'object', properties: { name: { type: 'string', minLength: 2, maxLength: 60 }, cuisine: { type: 'string', maxLength: 40 }, unitNumber: { type: 'string', example: '01-23' } } }, { unitNumber: '01-24' }) },
+        responses: {
+          200: ok('Stall updated', ref('Stall')),
+          400: error('Bad name or unit number, or an invalid id'),
+          401: notLoggedIn,
+          403: error('Not the person who added it, and not an admin'),
+          404: error('Stall not found'),
+          409: error('Another stall here has that name or unit number')
+        }
+      },
+      delete: {
+        tags: ['Stalls'],
+        summary: 'Remove a stall (admins only)',
+        description: 'The stall is hidden everywhere; its reviews and reports are kept.',
+        ...loginRequired,
+        parameters: [id('id', 'Stall id')],
+        responses: {
+          200: ok('Removed', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60719' } }),
+          401: notLoggedIn,
+          403: error('Not an admin'),
+          404: error('Stall not found')
+        }
+      }
     },
     '/api/stalls/{id}/reports': {
       get: { tags: ['Stalls'], summary: "A stall's live reports, newest first", parameters: [id('id', 'Stall id')], responses: { 200: ok('Reports', { type: 'array', items: ref('LiveReport') }), 404: error('Stall not found') } }
@@ -497,7 +549,8 @@ export default {
           404: error('Photo not found')
         }
       }
-    },
+    }
+,
 
     '/api/comments/{id}': {
       patch: {
@@ -524,6 +577,21 @@ export default {
           401: notLoggedIn,
           403: error('Not your comment, and not an admin'),
           404: error('Comment not found')
+        }
+      }
+    },
+
+    '/api/admin/import-centres': {
+      post: {
+        tags: ['Admin'],
+        summary: "Import NEA's hawker centres and closures from data.gov.sg now (admins only)",
+        description: 'Updates existing centres and adds new ones; nothing is deleted. The server also does this by itself on start-up when the data is over a week old.',
+        ...loginRequired,
+        responses: {
+          200: ok('Import finished', { type: 'object', example: { status: 'SUCCESS', recordsFetched: 123, recordsCreated: 0, recordsUpdated: 123, failed: [] } }),
+          401: notLoggedIn,
+          403: error('Not an admin'),
+          502: error('data.gov.sg could not be reached')
         }
       }
     }

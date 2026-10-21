@@ -11,6 +11,7 @@ import favouriteRoutes from './routes/favouriteRoutes.js'
 import reportRoutes from './routes/reportRoutes.js'
 import reviewRoutes from './routes/reviewRoutes.js'
 import reviewPhotoRoutes from './routes/reviewPhotoRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
 import commentRoutes from './routes/commentRoutes.js'
 import swaggerUi from 'swagger-ui-express'
 import openapi from './docs/openapi.js'
@@ -39,6 +40,7 @@ app.use('/api/favourites', favouriteRoutes)
 app.use('/api/reports', reportRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/review-photos', reviewPhotoRoutes)
+app.use('/api/admin', adminRoutes)
 app.use('/api/comments', commentRoutes)
 
 // Interactive list of every endpoint (Swagger UI), plus the raw OpenAPI description
