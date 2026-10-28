@@ -20,7 +20,7 @@ try {
 
 // Fills in or refreshes the official NEA hawker centres and closures when there are none yet, or the
 // last import is over a week old. So a new or redeployed server gets real data without anyone running
-// npm run import:centres. Set HAWKER_IMPORT_ON_START=off in backend/.env to turn this off.
+// pnpm import:centres. Set HAWKER_IMPORT_ON_START=off in backend/.env to turn this off.
 async function refreshHawkerDataIfStale() {
   if (process.env.HAWKER_IMPORT_ON_START === 'off') return
   try {

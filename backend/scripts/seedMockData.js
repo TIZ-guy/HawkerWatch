@@ -1,5 +1,5 @@
 // Fills the database with fictional demo data, then imports the real NEA hawker centres and closures
-// from data.gov.sg (skipped with a warning when offline). Run with: npm run seed
+// from data.gov.sg (skipped with a warning when offline). Run with: pnpm seed
 // Warning: this deletes existing users, centres, stalls, reports, favourites, reviews and comments.
 import 'dotenv/config'
 import fs from 'fs'
@@ -197,7 +197,7 @@ async function seed() {
   console.log('Importing real hawker centres from data.gov.sg...')
   const imported = await importHawkerCentres()
   if (imported.status === 'FAILED') {
-    console.warn(`Real hawker centres not imported (${imported.errorMessage}). Run npm run import:centres when online.`)
+    console.warn(`Real hawker centres not imported (${imported.errorMessage}). Run pnpm import:centres when online.`)
   } else {
     console.log(`Imported ${imported.recordsCreated + imported.recordsUpdated} real hawker centres.`)
   }

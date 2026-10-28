@@ -1,4 +1,4 @@
-// Imports every NEA hawker centre and its closure dates from data.gov.sg. Run with: npm run import:centres
+// Imports every NEA hawker centre and its closure dates from data.gov.sg. Run with: pnpm import:centres
 // Safe to run again at any time: centres are updated, not duplicated, and nothing else is deleted.
 // The server also runs this by itself on start-up when the data is missing or over a week old.
 import 'dotenv/config'

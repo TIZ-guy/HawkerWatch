@@ -41,7 +41,7 @@ const hawkerCentreSchema = new mongoose.Schema(
     photoUrl: { type: String, trim: true },
     foodStallCount: { type: Number, min: 0 }, // number of cooked food stalls, according to NEA
     // ID from the data.gov.sg dataset, used by the import to update a centre rather than add it twice.
-    // Centres without one were added by hand (e.g. the demo centres from npm run seed).
+    // Centres without one were added by hand (e.g. the demo centres from pnpm seed).
     sourceId: { type: String, unique: true, sparse: true, trim: true },
     closures: [closureSchema]
   },

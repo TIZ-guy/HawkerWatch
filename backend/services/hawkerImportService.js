@@ -1,5 +1,5 @@
 // Imports NEA's hawker centres and closures into MongoDB. Used by:
-//   - npm run import:centres (scripts/importHawkerClosures.js)
+//   - pnpm import:centres (scripts/importHawkerClosures.js)
 //   - the server on start-up, when the data is missing or over a week old (server.js)
 //   - admins, with POST /api/admin/import-centres
 // Each centre is matched by its NEA serial number (sourceId), so running the import again updates

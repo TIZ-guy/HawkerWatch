@@ -10,19 +10,28 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      # Installs the pnpm version named in package.json ("packageManager")
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           # Node 22 is the current long-term-support version (Node 20 stopped getting fixes in April 2026)
           node-version: 22
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
+            backend/pnpm-lock.yaml
       - name: Install root dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Install frontend dependencies
-        run: npm ci --prefix frontend
+        run: pnpm --dir frontend install --frozen-lockfile
       - name: Install backend dependencies
-        run: npm ci --prefix backend
+        run: pnpm --dir backend install --frozen-lockfile
       - name: Build frontend
-        run: npm run build --prefix frontend
+        run: pnpm --dir frontend build
+      - name: Unit test frontend (Vitest)
+        run: pnpm --dir frontend test:unit --run
       - name: Test backend
-        run: npm test --prefix backend
+        run: pnpm --dir backend test

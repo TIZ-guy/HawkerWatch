@@ -27,7 +27,7 @@ The browser then keeps the login cookie and sends it with the other requests on 
 |---|---|---|---|
 | [OneMap](https://www.onemap.gov.sg/apidocs/) map tiles (Singapore Land Authority) | The Explore Map basemap | Frontend, \`MapView.vue\`; public tiles, no token | In use |
 | [OneMap](https://www.onemap.gov.sg/apidocs/) search API | Turning a postal code or address into coordinates | Backend only, \`services/oneMapService.js\`; needs \`ONEMAP_TOKEN\` | Planned (stub ready) |
-| [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) | Every hawker centre (name, address, location, photo, stall count) and its cleaning and works closures | Backend import, \`npm run import:centres\`; the server also refreshes it on start-up when it is over a week old | In use |
+| [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) | Every hawker centre (name, address, location, photo, stall count) and its cleaning and works closures | Backend import, \`pnpm import:centres\`; the server also refreshes it on start-up when it is over a week old | In use |
 | Google Maps | "Directions" link on each centre page | Frontend link only; no API call | In use |
 | MongoDB Atlas | Database | Backend, \`MONGO_URI\` | In use |
 `

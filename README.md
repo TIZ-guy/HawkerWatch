@@ -49,35 +49,38 @@ The app is designed for desktop browsers. Layouts also adapt to small screens, b
 
 ## Prerequisites
 
-Install Node.js 22 or newer and npm (CI uses Node 22). You also need a MongoDB database: the team's MongoDB Atlas cluster, or MongoDB running on your own computer.
+Install Node.js 22 or newer (CI uses Node 22) and **pnpm**, the package manager this project uses: run `npm install -g pnpm` once. Each `package.json` names the pnpm version (`packageManager`), and pnpm switches to it automatically. You also need a MongoDB database: the team's MongoDB Atlas cluster, or MongoDB running on your own computer.
+
+Use `pnpm` for everything, not `npm`: `pnpm add <package>` (or `pnpm add -D <package>` for dev tools) inside `frontend/` or `backend/`, and commit the updated `pnpm-lock.yaml`. pnpm blocks packages from running install scripts unless they are listed in that folder's `pnpm-workspace.yaml`; if an install stops with "Ignored build scripts", run `pnpm approve-builds <package>` (or `pnpm approve-builds '!<package>'` to refuse) and commit the change.
 
 ## Local setup
 
 ```powershell
-npm run install:all
+pnpm install:all
 Copy-Item backend/.env.example backend/.env
-npm run dev
+pnpm dev
 ```
 
 Then edit `backend/.env`:
 
 - `MONGO_URI`: the team's Atlas connection string, or `mongodb://127.0.0.1:27017` for a local MongoDB.
-- `MONGO_DB_NAME`: set your own name, e.g. `hawker-watch-yourname`. `npm run seed` deletes and refills the whole database, so without this you would wipe the shared team data.
+- `MONGO_DB_NAME`: set your own name, e.g. `hawker-watch-yourname`. `pnpm seed` deletes and refills the whole database, so without this you would wipe the shared team data.
 - `JWT_SECRET`: any long random text for local development.
 
 The frontend runs at http://localhost:5173 and the API runs at http://localhost:3000. In development Vite forwards `/api` requests to the backend, so the frontend needs no `.env` file. Set `VITE_API_URL` in `frontend/.env` only if the API is hosted somewhere else.
 
 ## Commands
 
-- `npm run dev`: run frontend and backend together
-- `npm run build`: build the frontend
-- `npm test`: run backend tests
-- `npm run seed`: replace the database contents with fictional demo data, then import the real NEA centres (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, a demo login, and a demo login with two-factor login on). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
-- `npm run import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
+- `pnpm dev`: run frontend and backend together
+- `pnpm build`: build the frontend
+- `pnpm test`: run backend tests
+- `pnpm test:unit`: run frontend unit tests once (Vitest). Inside `frontend/`, `pnpm test:unit` keeps watching and re-runs tests when files change
+- `pnpm seed`: replace the database contents with fictional demo data, then import the real NEA centres (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, a demo login, and a demo login with two-factor login on). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `pnpm import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
 
 ## Trying the frontend
 
-After `npm run seed` and `npm run dev`, open http://localhost:5173.
+After `pnpm seed` and `pnpm dev`, open http://localhost:5173.
 
 - **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 2 km of your location; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Food options** chips (cuisines). Filters can be combined.
 - **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, Food options chips, and an expandable list of recent updates with a **Flag** button for wrong reports.
@@ -87,7 +90,7 @@ After `npm run seed` and `npm run dev`, open http://localhost:5173.
 - **Favourites (`/favourites`, login required)**: the heart on any centre or stall saves it. The page shows saved centres and stalls with their closures, live status and reminder.
 - **Profile (`/profile`, login required)**: account details, change name, change password, and reminder days and time for each favourite. Reminders are saved preferences only; nothing is sent yet.
 
-To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. The other seeded users can't log in. Accounts you register yourself last until the next `npm run seed`.
+To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. The other seeded users can't log in. Accounts you register yourself last until the next `pnpm seed`.
 
 With the seed data, Seaside Demo Hawker Centre is officially closed today, Kampong Demo Food Centre has cleaning in 5 days, and Kampong has 3 stalls with live reports.
 
@@ -102,11 +105,16 @@ frontend/src/
   services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService, reportService, reviewService, commentService, locationService
   stores/       useAuthStore, useFavouriteStore
   utils/        status labels, closure dates, time formatting, location and distance, reminder text
+  **/__tests__/ Vitest unit tests, next to the code they test (e.g. utils/__tests__/closures.spec.js)
 ```
+
+Import from `src/` with the `@/` alias, e.g. `import { timeAgo } from '@/utils/time.js'`, instead of counting `../` folders. It is set up in `vite.config.js` (and `jsconfig.json` for editor autocomplete); older imports with `../` still work.
+
+Frontend tests use Vitest (`describe` / `it` / `expect`). Put them in a `__tests__` folder beside the file being tested, named `<file>.spec.js`. CI runs them on every push and pull request.
 
 ## API endpoints
 
-With `npm run dev` running, open **http://localhost:5173/api/docs** for an interactive list of every endpoint (Swagger UI), including request examples, possible responses, a **Try it out** button, and the outside services HawkerWatch uses. The raw OpenAPI description is at `/api/docs.json`. It lives in `backend/docs/openapi.js`; `npm test` fails if a route is added without documenting it there.
+With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interactive list of every endpoint (Swagger UI), including request examples, possible responses, a **Try it out** button, and the outside services HawkerWatch uses. The raw OpenAPI description is at `/api/docs.json`. It lives in `backend/docs/openapi.js`; `pnpm test` fails if a route is added without documenting it there.
 
 | Method | Path | Notes |
 |---|---|---|

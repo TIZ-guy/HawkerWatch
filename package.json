@@ -2,16 +2,18 @@
   "name": "hawker-watch",
   "private": true,
   "scripts": {
-    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "npm run dev --prefix frontend",
-    "dev:backend": "npm run dev --prefix backend",
-    "test": "npm test --prefix backend",
-    "build": "npm run build --prefix frontend",
-    "seed": "npm run seed --prefix backend",
-    "import:centres": "npm run import:centres --prefix backend"
+    "install:all": "pnpm install && pnpm --dir frontend install && pnpm --dir backend install",
+    "dev": "concurrently \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "dev:frontend": "pnpm --dir frontend dev",
+    "dev:backend": "pnpm --dir backend dev",
+    "test": "pnpm --dir backend test",
+    "test:unit": "pnpm --dir frontend test:unit --run",
+    "build": "pnpm --dir frontend build",
+    "seed": "pnpm --dir backend seed",
+    "import:centres": "pnpm --dir backend import:centres"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
-  }
+  },
+  "packageManager": "pnpm@12.12.1"
 }

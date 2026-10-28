@@ -1,0 +1,4 @@
+# Packages allowed (true) or not allowed (false) to run install scripts. pnpm blocks them unless listed here.
+# esbuild (used by Vite) checks its build tool during install.
+allowBuilds:
+  esbuild: true
