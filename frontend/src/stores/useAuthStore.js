@@ -1,65 +1,71 @@
 // Who is logged in, shared by every component that calls useAuthStore().
-// Usage in a component: const auth = useAuthStore(), then auth.state.user (null when logged out).
-import { reactive, readonly } from 'vue'
-import * as authService from '../services/authService.js'
+// Usage in a component: const auth = useAuthStore(), then auth.user (null when logged out) or auth.isLoggedIn.
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import * as authService from '@/services/authService.js'
 
-const state = reactive({
-  user: null,
+export const useAuthStore = defineStore('auth', () => {
+  // State
+  const user = ref(null)
   // false until we've asked the backend whether the login cookie is still valid
-  checked: false
-})
+  const checked = ref(false)
 
-let checking = null
+  // Getters
+  const isLoggedIn = computed(() => Boolean(user.value))
+  const isAdmin = computed(() => user.value?.role === 'admin')
 
-// Asks the backend once per page load; later calls reuse the same answer.
-function loadCurrentUser() {
-  checking ||= authService
-    .getCurrentUser()
-    .then((user) => { state.user = user })
-    .catch(() => { state.user = null })
-    .finally(() => { state.checked = true })
-  return checking
-}
+  // Actions
+  let checking = null
 
-// Returns { twoFactorRequired: true, challengeToken } when a code is still needed (see loginTwoFactor).
-async function login(credentials) {
-  const result = await authService.login(credentials)
-  if (result.user) state.user = result.user
-  return result
-}
+  // Asks the backend once per page load; later calls reuse the same answer.
+  function loadCurrentUser() {
+    checking ||= authService
+      .getCurrentUser()
+      .then((current) => { user.value = current })
+      .catch(() => { user.value = null })
+      .finally(() => { checked.value = true })
+    return checking
+  }
 
-async function loginTwoFactor(details) {
-  state.user = await authService.loginTwoFactor(details)
-}
+  // Returns { twoFactorRequired: true, challengeToken } when a code is still needed (see loginTwoFactor).
+  async function login(credentials) {
+    const result = await authService.login(credentials)
+    if (result.user) user.value = result.user
+    return result
+  }
 
-async function enableTwoFactor(code) {
-  state.user = await authService.enableTwoFactor({ code })
-}
+  async function loginTwoFactor(details) {
+    user.value = await authService.loginTwoFactor(details)
+  }
 
-async function disableTwoFactor(details) {
-  state.user = await authService.disableTwoFactor(details)
-}
+  async function enableTwoFactor(code) {
+    user.value = await authService.enableTwoFactor({ code })
+  }
 
-async function register(details) {
-  state.user = await authService.register(details)
-}
+  async function disableTwoFactor(details) {
+    user.value = await authService.disableTwoFactor(details)
+  }
 
-async function updateName(name) {
-  state.user = await authService.updateMe({ name })
-}
+  async function register(details) {
+    user.value = await authService.register(details)
+  }
 
-async function changePassword(passwords) {
-  await authService.changePassword(passwords)
-}
+  async function updateName(name) {
+    user.value = await authService.updateMe({ name })
+  }
 
-async function logout() {
-  await authService.logout()
-  state.user = null
-}
+  async function changePassword(passwords) {
+    await authService.changePassword(passwords)
+  }
 
-export function useAuthStore() {
+  async function logout() {
+    await authService.logout()
+    user.value = null
+  }
+
   return {
-    state: readonly(state), loadCurrentUser, login, loginTwoFactor, register, updateName, changePassword, logout,
+    user, checked, isLoggedIn, isAdmin,
+    loadCurrentUser, login, loginTwoFactor, register, updateName, changePassword, logout,
     startTwoFactorSetup: authService.startTwoFactorSetup, enableTwoFactor, disableTwoFactor
   }
-}
+})

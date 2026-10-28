@@ -57,7 +57,7 @@ const stall = computed(() => stalls.value.find((item) => item._id === stallId.va
 
 async function startReport() {
   thanks.value = ''
-  if (!auth.state.user) {
+  if (!auth.user) {
     router.push({ path: '/login', query: { redirect: '/reports' } })
     return
   }

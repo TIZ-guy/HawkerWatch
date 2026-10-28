@@ -31,10 +31,10 @@ const confirmingRemove = ref(false)
 const removing = ref(false)
 const removeError = ref('')
 
-const isAdmin = computed(() => auth.state.user?.role === 'admin')
+const isAdmin = computed(() => auth.isAdmin)
 // The person who added the stall, or an admin, can edit it
 const canEdit = computed(() => {
-  const user = auth.state.user
+  const user = auth.user
   if (!user || !stall.value) return false
   return user.role === 'admin' || String(stall.value.addedBy) === String(user._id)
 })

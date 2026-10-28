@@ -34,8 +34,8 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.loadCurrentUser()
 
-  if (to.meta.requiresAuth && !auth.state.user) return { path: '/login', query: { redirect: to.fullPath } }
-  if (to.meta.guestOnly && auth.state.user) return { path: '/' }
+  if (to.meta.requiresAuth && !auth.user) return { path: '/login', query: { redirect: to.fullPath } }
+  if (to.meta.guestOnly && auth.user) return { path: '/' }
 })
 
 export default router

@@ -214,7 +214,7 @@ onMounted(() => {
         </div>
 
         <div v-if="centres.length" class="row g-4">
-          <div v-for="centre in centres" :key="centre._id" class="col-md-6 col-xl-4">
+          <div v-for="centre in centres" :key="centre._id" class="col-sm-6 col-lg-4">
             <HawkerCentreCard :centre="centre" :distance-km="location ? distanceKm(location, centre.location) : null" />
           </div>
         </div>
@@ -231,7 +231,7 @@ onMounted(() => {
           Stalls <span class="text-secondary fs-5">({{ stalls.length }})</span>
         </h2>
         <div v-if="stalls.length" class="row g-3">
-          <div v-for="stall in stalls" :key="stall._id" class="col-md-6 col-xl-4">
+          <div v-for="stall in stalls" :key="stall._id" class="col-sm-6 col-lg-4">
             <StallCard :stall="stall" show-centre />
           </div>
         </div>

@@ -15,10 +15,10 @@ const removeError = ref('')
 // stallId -> stall from /stalls/:id, which adds the live report and the centre's name
 const stallDetails = ref({})
 
-const centreFavourites = computed(() => favourites.state.items.filter((item) => item.targetType === 'HawkerCentre'))
-const stallFavourites = computed(() => favourites.state.items.filter((item) => item.targetType === 'Stall'))
+const centreFavourites = computed(() => favourites.centres)
+const stallFavourites = computed(() => favourites.stalls)
 // A favourite whose stall or centre has been deleted comes back with target: null
-const missing = computed(() => favourites.state.items.filter((item) => !item.target))
+const missing = computed(() => favourites.items.filter((item) => !item.target))
 
 async function load() {
   loading.value = true
@@ -53,9 +53,9 @@ onMounted(load)
     </p>
 
     <LoadingState v-if="loading" message="Loading your favourites..." />
-    <ErrorState v-else-if="favourites.state.error" :message="favourites.state.error" retryable @retry="load" />
+    <ErrorState v-else-if="favourites.error" :message="favourites.error" retryable @retry="load" />
 
-    <div v-else-if="!favourites.state.items.length" class="card border-0 shadow-sm">
+    <div v-else-if="!favourites.items.length" class="card border-0 shadow-sm">
       <div class="card-body p-4">
         <h2 class="h5">No favourites yet</h2>
         <p class="text-secondary">

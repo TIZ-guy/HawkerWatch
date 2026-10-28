@@ -16,7 +16,7 @@ const auth = useAuthStore()
 const favourites = useFavouriteStore()
 const route = useRoute()
 
-const user = computed(() => auth.state.user)
+const user = computed(() => auth.user)
 const memberSince = computed(() =>
   user.value?.createdAt
     ? new Date(user.value.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -81,7 +81,7 @@ async function savePassword() {
 }
 
 // Reminders: "Edit" links on the Favourites page open /profile#alerts
-const favouritesWithTargets = computed(() => favourites.state.items.filter((item) => item.target))
+const favouritesWithTargets = computed(() => favourites.items.filter((item) => item.target))
 const loadingFavourites = ref(true)
 
 onMounted(async () => {
@@ -172,7 +172,7 @@ onMounted(async () => {
             </p>
 
             <LoadingState v-if="loadingFavourites" message="Loading your favourites..." />
-            <ErrorState v-else-if="favourites.state.error" :message="favourites.state.error" />
+            <ErrorState v-else-if="favourites.error" :message="favourites.error" />
             <p v-else-if="!favouritesWithTargets.length" class="text-secondary mb-0">
               You haven't saved any favourites yet. Select the <i class="bi bi-heart" aria-label="heart"></i> on a
               <RouterLink to="/">hawker centre or stall</RouterLink> to add one.

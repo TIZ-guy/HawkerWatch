@@ -63,7 +63,7 @@ const directionsUrl = computed(() => {
 
 function startAddingStall() {
   addedMessage.value = ''
-  if (!auth.state.user) {
+  if (!auth.user) {
     router.push({ path: '/login', query: { redirect: `${route.path}#stalls` } })
     return
   }

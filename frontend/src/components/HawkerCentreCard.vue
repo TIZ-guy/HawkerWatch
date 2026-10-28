@@ -15,13 +15,13 @@ defineProps({
     <img v-if="centre.photoUrl" :src="centre.photoUrl" alt="" class="card-img-top centre-photo" loading="lazy" />
     <div class="card-body p-4 d-flex flex-column">
       <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap gap-2 badges">
           <ClosureBadge :closures="centre.closures" />
           <span v-if="distanceKm != null" class="badge text-bg-light border">
             <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ formatDistance(distanceKm) }}
           </span>
         </div>
-        <FavouriteButton target-type="HawkerCentre" :target-id="centre._id" :name="centre.name" />
+        <FavouriteButton class="flex-shrink-0" target-type="HawkerCentre" :target-id="centre._id" :name="centre.name" />
       </div>
       <h3 class="h5">
         <RouterLink class="stretched-link text-reset text-decoration-none" :to="`/hawker-centres/${centre._id}`">
@@ -46,6 +46,16 @@ defineProps({
   height: 140px;
   object-fit: cover;
   background: #eee;
+}
+
+/* On narrow cards a long badge like "Closed today · Repair works" wraps instead of pushing the heart out */
+.badges {
+  min-width: 0;
+}
+
+.badges :deep(.badge) {
+  white-space: normal;
+  text-align: left;
 }
 
 .centre-card {

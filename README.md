@@ -67,7 +67,7 @@ Then edit `backend/.env`:
 - `MONGO_DB_NAME`: set your own name, e.g. `hawker-watch-yourname`. `pnpm seed` deletes and refills the whole database, so without this you would wipe the shared team data.
 - `JWT_SECRET`: any long random text for local development.
 
-The frontend runs at http://localhost:5173 and the API runs at http://localhost:3000. In development Vite forwards `/api` requests to the backend, so the frontend needs no `.env` file. Set `VITE_API_URL` in `frontend/.env` only if the API is hosted somewhere else.
+The frontend runs at http://localhost:5173 and the API runs at http://localhost:8000 (the class convention). If your `backend/.env` still says `PORT=3000` from before, change it to `8000`. In development Vite forwards `/api` requests to the backend, so the frontend needs no `.env` file. Set `VITE_API_URL` in `frontend/.env` only if the API is hosted somewhere else.
 
 ## Commands
 
@@ -103,14 +103,16 @@ frontend/src/
                 OfficialClosureAlert, CommunityUpdateCard, FavouriteButton, FavouriteAlertEditor,
                 LoadingState, ErrorState
   services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService, reportService, reviewService, commentService, locationService
-  stores/       useAuthStore, useFavouriteStore
+  stores/       Pinia setup stores: useAuthStore, useFavouriteStore
   utils/        status labels, closure dates, time formatting, location and distance, reminder text
-  **/__tests__/ Vitest unit tests, next to the code they test (e.g. utils/__tests__/closures.spec.js)
+  **/__tests__/ Vitest tests, next to the code they test (e.g. utils/__tests__/closures.spec.js)
 ```
+
+Shared state lives in Pinia stores (registered in `main.js`). Read fields straight off the store: `const auth = useAuthStore()`, then `auth.user`, `auth.isLoggedIn`, `auth.isAdmin`; `const favourites = useFavouriteStore()`, then `favourites.items`, `favourites.stalls`, `favourites.toggle('Stall', id)`. Older code used `auth.state.user`; that no longer works.
 
 Import from `src/` with the `@/` alias, e.g. `import { timeAgo } from '@/utils/time.js'`, instead of counting `../` folders. It is set up in `vite.config.js` (and `jsconfig.json` for editor autocomplete); older imports with `../` still work.
 
-Frontend tests use Vitest (`describe` / `it` / `expect`). Put them in a `__tests__` folder beside the file being tested, named `<file>.spec.js`. CI runs them on every push and pull request.
+Frontend tests use Vitest (`describe` / `it` / `expect`). Put them in a `__tests__` folder beside the file being tested, named `<file>.spec.js`. CI runs them on every push and pull request. Component tests mount a component with Vue Test Utils in a pretend browser page (jsdom); copy `components/__tests__/FilterChips.spec.js` as a starting point. Store tests (`stores/__tests__/useFavouriteStore.spec.js`) replace the service with `vi.mock` so no server is needed.
 
 ## API endpoints
 

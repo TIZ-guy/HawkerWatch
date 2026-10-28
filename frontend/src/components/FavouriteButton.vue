@@ -26,7 +26,7 @@ const label = computed(() => `${saved.value ? 'Remove' : 'Save'} ${props.name ||
 
 async function onClick() {
   errorMessage.value = ''
-  if (!auth.state.user) {
+  if (!auth.user) {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
   }

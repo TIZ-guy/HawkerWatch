@@ -7,7 +7,7 @@ import { importHawkerCentres, isHawkerDataStale } from './services/hawkerImportS
 // Node on some Windows networks can't resolve Atlas mongodb+srv:// records with the system DNS
 dns.setServers(['8.8.8.8', '1.1.1.1'])
 
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 8000
 
 try {
   await connectDB()

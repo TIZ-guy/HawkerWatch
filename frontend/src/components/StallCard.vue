@@ -66,7 +66,7 @@ const thanks = ref('')
 
 function startReport() {
   thanks.value = ''
-  if (!auth.state.user) return goToLogin()
+  if (!auth.user) return goToLogin()
   reporting.value = true
 }
 
@@ -87,7 +87,7 @@ function goToLogin() {
 
 function startFlag(reportId) {
   flagError.value = { id: '', message: '' }
-  if (!auth.state.user) return goToLogin()
+  if (!auth.user) return goToLogin()
   confirmingFlagId.value = reportId
 }
 

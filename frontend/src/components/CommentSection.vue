@@ -37,8 +37,8 @@ const confirmingDeleteId = ref('')
 const deletingId = ref('')
 const deleteError = ref({ id: '', message: '' })
 
-const isMine = (comment) => Boolean(auth.state.user) && comment.user?._id === auth.state.user._id
-const canDelete = (comment) => isMine(comment) || auth.state.user?.role === 'admin'
+const isMine = (comment) => Boolean(auth.user) && comment.user?._id === auth.user._id
+const canDelete = (comment) => isMine(comment) || auth.isAdmin
 const wasEdited = (comment) => new Date(comment.updatedAt) > new Date(comment.createdAt)
 
 async function load(id) {
@@ -142,7 +142,7 @@ watch(() => props.centreId, (id) => {
 
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body p-4">
-        <form v-if="auth.state.user" @submit.prevent="post">
+        <form v-if="auth.user" @submit.prevent="post">
           <label for="new-comment" class="form-label small fw-semibold">Share a tip about this centre</label>
           <textarea
             id="new-comment"

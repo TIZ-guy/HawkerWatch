@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/useAuthStore.js'
 import PasswordInput from './PasswordInput.vue'
 
 const auth = useAuthStore()
-const enabled = computed(() => Boolean(auth.state.user?.twoFactorEnabled))
+const enabled = computed(() => Boolean(auth.user?.twoFactorEnabled))
 
 // Turning on: setup holds { secret, qrCode } after "Set up" is pressed, until a correct code is entered.
 const setup = ref(null)

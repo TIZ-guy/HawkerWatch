@@ -36,10 +36,10 @@ async function logOut() {
           <RouterLink class="nav-link" to="/profile">Profile</RouterLink>
 
           <!-- Hidden until we know whether the user is logged in, so the buttons don't flicker -->
-          <template v-if="auth.state.checked">
-            <template v-if="auth.state.user">
+          <template v-if="auth.checked">
+            <template v-if="auth.user">
               <span class="navbar-text ms-lg-2">
-                <i class="bi bi-person-circle me-1"></i>{{ auth.state.user.name }}
+                <i class="bi bi-person-circle me-1"></i>{{ auth.user.name }}
               </span>
               <button type="button" class="btn btn-outline-danger btn-sm" :disabled="loggingOut" @click="logOut">
                 Log out

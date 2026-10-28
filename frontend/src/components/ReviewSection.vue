@@ -63,9 +63,9 @@ const highlightedId = ref('')
 
 // The logged-in user's own review, or null
 const myReview = computed(() => {
-  if (!auth.state.user) return null
+  if (!auth.user) return null
   for (const review of reviews.value) {
-    if (review.user && review.user._id === auth.state.user._id) return review
+    if (review.user && review.user._id === auth.user._id) return review
   }
   return null
 })
@@ -96,8 +96,8 @@ const galleryPhotos = computed(() => {
   return photos
 })
 
-const isAdmin = computed(() => auth.state.user?.role === 'admin')
-const showForm = computed(() => Boolean(auth.state.user) && (!myReview.value || editing.value))
+const isAdmin = computed(() => auth.isAdmin)
+const showForm = computed(() => Boolean(auth.user) && (!myReview.value || editing.value))
 const photoCount = computed(() => keptPhotos.value.length + newPhotos.value.length)
 
 function isMine(review) {
@@ -350,7 +350,7 @@ async function adminRemovePhoto(review, photoId) {
       </div>
 
       <!-- Logged out -->
-      <div v-else-if="!auth.state.user" class="card border-0 shadow-sm mb-4">
+      <div v-else-if="!auth.user" class="card border-0 shadow-sm mb-4">
         <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="text-secondary">Log in to rate and review {{ stallName }}.</span>
           <button type="button" class="btn btn-sm btn-outline-danger" v-on:click="goToLogin">Log in to review</button>
