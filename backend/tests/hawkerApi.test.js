@@ -30,10 +30,12 @@ async function startServer(t) {
     return `http://127.0.0.1:${server.address().port}`;
 }
 
-test('GET /api/hawker-centres returns the centres', async (t) => {
+test('GET /api/hawker-centres returns the centres, each with how many stalls are listed', async (t) => {
     t.mock.method(HawkerCentre, 'find', () => fakeQuery([
-        { _id: CENTRE_ID, name: 'Test Centre', location: { coordinates: [103.8, 1.3] } }
+        { _id: CENTRE_ID, name: 'Test Centre', location: { coordinates: [103.8, 1.3] } },
+        { _id: '64b7f0c2a1b2c3d4e5f6071b', name: 'Empty Centre' }
     ]));
+    const aggregate = t.mock.method(Stall, 'aggregate', async () => [{ _id: CENTRE_ID, count: 12 }]);
 
     const base = await startServer(t);
     const body = await (await fetch(`${base}/api/hawker-centres`)).json();
@@ -41,10 +43,25 @@ test('GET /api/hawker-centres returns the centres', async (t) => {
     assert.equal(body.success, true);
     assert.equal(body.data[0].name, 'Test Centre');
     assert.deepEqual(body.data[0].location.coordinates, [103.8, 1.3]);
+    assert.equal(body.data[0].stallCount, 12);
+    assert.equal(body.data[1].stallCount, 0); // no stalls added yet
+    // Only stalls that haven't been removed are counted
+    assert.equal(aggregate.mock.calls[0].arguments[0][0].$match.isActive, true);
+});
+
+test('GET /api/hawker-centres/:id includes how many stalls are listed', async (t) => {
+    t.mock.method(HawkerCentre, 'findById', () => fakeQuery({ _id: CENTRE_ID, name: 'Test Centre' }));
+    t.mock.method(Stall, 'aggregate', async () => [{ _id: CENTRE_ID, count: 3 }]);
+
+    const base = await startServer(t);
+    const body = await (await fetch(`${base}/api/hawker-centres/${CENTRE_ID}`)).json();
+
+    assert.equal(body.data.stallCount, 3);
 });
 
 test('GET /api/hawker-centres builds a search and a nearby filter', async (t) => {
     const find = t.mock.method(HawkerCentre, 'find', () => fakeQuery([]));
+    t.mock.method(Stall, 'aggregate', async () => []);
 
     const base = await startServer(t);
     await fetch(`${base}/api/hawker-centres?search=chicken&lat=1.3&lng=103.8&radius=500`);

@@ -1,7 +1,7 @@
 <script setup>
 // Centre detail page: official closures, community summary, the centre's stalls and comments.
 // A link ending in #stall-<id> (from the home page stall results) scrolls to that stall.
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OfficialClosureAlert from '../components/OfficialClosureAlert.vue'
 import CommunityUpdateCard from '../components/CommunityUpdateCard.vue'
@@ -14,6 +14,9 @@ import FavouriteButton from '../components/FavouriteButton.vue'
 import CommentSection from '../components/CommentSection.vue'
 import StallForm from '../components/StallForm.vue'
 import { useAuthStore } from '../stores/useAuthStore.js'
+
+// The map library is big, so it is only downloaded when a centre page with a map is opened
+const CentreMap = defineAsyncComponent(() => import('../components/CentreMap.vue'))
 import { getCommunitySummary, getHawkerCentre, getHawkerCentreStalls } from '../services/hawkerService.js'
 
 const route = useRoute()
@@ -169,8 +172,11 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
             <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ centre.address
             }}<span v-if="centre.postalCode">, Singapore {{ centre.postalCode }}</span>
           </p>
-          <p v-if="centre.foodStallCount" class="text-secondary mb-2">
-            <i class="bi bi-shop me-1" aria-hidden="true"></i>{{ centre.foodStallCount }} cooked food stalls (NEA)
+          <!-- stalls.length changes straight away when someone adds a stall on this page -->
+          <p class="text-secondary mb-2">
+            <i class="bi bi-shop me-1" aria-hidden="true"></i>
+            <a href="#stalls" class="text-reset">{{ stalls.length }} stall{{ stalls.length === 1 ? '' : 's' }} listed on HawkerWatch</a>
+            <span v-if="centre.foodStallCount"> · {{ centre.foodStallCount }} cooked food stalls in total (NEA)</span>
           </p>
           <p v-if="centre.description" class="mb-3">{{ centre.description }}</p>
           <div class="d-flex flex-wrap gap-2">
@@ -194,6 +200,18 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
           <CommunityUpdateCard :summary="summary" :error="summaryError" />
         </div>
       </div>
+
+      <section v-if="centre.location?.coordinates" class="mt-5" aria-labelledby="location-heading">
+        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+          <h2 id="location-heading" class="h3 mb-0">Location</h2>
+          <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="small text-danger">
+            <i class="bi bi-sign-turn-right me-1" aria-hidden="true"></i>Get directions
+          </a>
+        </div>
+        <div class="card border-0 shadow-sm overflow-hidden">
+          <CentreMap :key="centre._id" :centre="centre" />
+        </div>
+      </section>
 
       <section id="stalls" class="mt-5" aria-labelledby="stalls-heading">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">

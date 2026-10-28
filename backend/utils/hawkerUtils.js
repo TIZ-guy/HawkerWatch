@@ -1,4 +1,5 @@
 import StatusReport from '../models/StatusReport.js';
+import Stall from '../models/Stall.js';
 import Review from '../models/Review.js';
 import { FLAG_HIDE_THRESHOLD } from './reportUtils.js';
 import { currentReviewFilter } from './reviewUtils.js';
@@ -61,4 +62,25 @@ export async function getRatings(stallIds) {
 // The rating to send for one stall: { average, count }, or { average: null, count: 0 } with no reviews.
 export function ratingFor(ratings, stallId) {
     return ratings[String(stallId)] || { average: null, count: 0 };
+}
+
+// How many stalls are listed (added and not removed) at each centre in `centreIds`.
+// Counted fresh on every request, so it changes as soon as someone adds or removes a stall.
+// Returns an object of centreId -> count. Centres with no stalls are left out (use stallCountFor).
+export async function getStallCounts(centreIds) {
+    const groups = await Stall.aggregate([
+        { $match: { hawkerCentre: { $in: centreIds }, isActive: true } },
+        { $group: { _id: '$hawkerCentre', count: { $sum: 1 } } }
+    ]);
+
+    const counts = {};
+    for (const group of groups) {
+        counts[String(group._id)] = group.count;
+    }
+    return counts;
+}
+
+// The number of stalls listed at one centre (0 when none)
+export function stallCountFor(counts, centreId) {
+    return counts[String(centreId)] || 0;
 }

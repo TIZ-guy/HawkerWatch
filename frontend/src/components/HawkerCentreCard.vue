@@ -1,5 +1,5 @@
 <script setup>
-// Centre summary for lists: NEA photo, name, address, official closure badge and optional distance.
+// Centre summary for lists: NEA photo, name, address, stalls listed, official closure badge and optional distance.
 import ClosureBadge from './ClosureBadge.vue'
 import FavouriteButton from './FavouriteButton.vue'
 import { formatDistance } from '../services/locationService.js'
@@ -30,6 +30,12 @@ defineProps({
       </h3>
       <p class="text-secondary mb-0">
         {{ centre.address }}<span v-if="centre.postalCode">, Singapore {{ centre.postalCode }}</span>
+      </p>
+      <!-- stallCount comes from the centre list API (stalls listed in HawkerWatch right now) -->
+      <p v-if="centre.stallCount != null" class="small text-secondary mt-2 mb-0">
+        <i class="bi bi-shop me-1" aria-hidden="true"></i>
+        <span v-if="centre.stallCount > 0">{{ centre.stallCount }} stall{{ centre.stallCount === 1 ? '' : 's' }} listed</span>
+        <span v-else>No stalls listed yet</span>
       </p>
       <span class="mt-auto pt-3 small fw-semibold text-danger">
         View stalls and updates <i class="bi bi-arrow-right" aria-hidden="true"></i>

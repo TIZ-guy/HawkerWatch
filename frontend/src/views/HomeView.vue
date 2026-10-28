@@ -6,6 +6,7 @@ import HawkerCentreCard from '../components/HawkerCentreCard.vue'
 import StallCard from '../components/StallCard.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
+import PlaceSearch from '../components/PlaceSearch.vue'
 import { getCommunitySummary, getHawkerCentres, getStalls } from '../services/hawkerService.js'
 import { currentClosure } from '../utils/closures.js'
 import { DEFAULT_DISTANCE_KM, DISTANCE_OPTIONS_KM, distanceKm, getCurrentPosition } from '../services/locationService.js'
@@ -28,8 +29,13 @@ const quickFilters = ref([])
 const cuisine = ref('')
 const cuisineOptions = ref([])
 
-const location = ref(null)
+const location = ref(null) // from the browser, when Near me is on
 const locationError = ref('')
+// A postal code or place the user searched for ({ lat, lng, label, ... }), or null.
+// It works like Near me, but from that place instead of where the user is.
+const searchedPlace = ref(null)
+// Where distances are measured from: the searched place, or the user's location
+const origin = computed(() => searchedPlace.value || location.value)
 
 const centres = ref([])
 const stalls = ref([])
@@ -45,7 +51,7 @@ const openOnly = computed(() => quickFilters.value.includes('open'))
 const liveOnly = computed(() => quickFilters.value.includes('live'))
 const findingLocation = computed(() => nearMe.value && !location.value && !locationError.value)
 const showStalls = computed(() => Boolean(debouncedSearch.value || cuisine.value))
-const hasFilters = computed(() => Boolean(search.value || quickFilters.value.length || cuisine.value))
+const hasFilters = computed(() => Boolean(search.value || quickFilters.value.length || cuisine.value || searchedPlace.value))
 
 // Typing only searches once the user pauses, instead of on every key.
 let searchTimer
@@ -60,6 +66,7 @@ watch(nearMe, async (on) => {
     location.value = null
     return
   }
+  searchedPlace.value = null // Near me replaces a searched postal code
   try {
     location.value = await getCurrentPosition()
   } catch (error) {
@@ -67,6 +74,12 @@ watch(nearMe, async (on) => {
     quickFilters.value = quickFilters.value.filter((filter) => filter !== 'near')
   }
 })
+
+// A postal code or place was found: show centres near it (turns Near me off, as only one can be used)
+function usePlace(place) {
+  searchedPlace.value = place
+  quickFilters.value = quickFilters.value.filter((filter) => filter !== 'near')
+}
 
 // The list endpoint has no live-update counts, so "Has live updates" asks for each centre's
 // summary. Answers are reused for a couple of minutes to avoid repeating the same requests.
@@ -85,7 +98,7 @@ let latestRequest = 0
 async function loadResults() {
   const request = ++latestRequest
   const term = debouncedSearch.value
-  const near = location.value ? { lat: location.value.lat, lng: location.value.lng, radius: nearDistanceKm.value * 1000 } : {}
+  const near = origin.value ? { lat: origin.value.lat, lng: origin.value.lng, radius: nearDistanceKm.value * 1000 } : {}
   loading.value = true
   errorMessage.value = ''
 
@@ -142,9 +155,10 @@ function clearFilters() {
   debouncedSearch.value = ''
   quickFilters.value = []
   cuisine.value = ''
+  searchedPlace.value = null
 }
 
-watch([debouncedSearch, cuisine, location, openOnly, liveOnly, nearDistanceKm], loadResults)
+watch([debouncedSearch, cuisine, origin, openOnly, liveOnly, nearDistanceKm], loadResults)
 
 onMounted(() => {
   loadResults()
@@ -170,9 +184,11 @@ onMounted(() => {
               placeholder="Search hawker centres or stalls"
             />
             <FilterChips v-model="quickFilters" class="mt-3" :options="QUICK_FILTERS" multiple label="Quick filters" />
-            <div v-if="nearMe" class="d-flex flex-wrap align-items-center gap-2 mt-2">
+            <p class="small fw-semibold text-secondary mt-3 mb-2">Or find centres near a postal code</p>
+            <PlaceSearch :place="searchedPlace" input-id="home-place-search" v-on:picked="usePlace" v-on:cleared="searchedPlace = null" />
+            <div v-if="nearMe || searchedPlace" class="d-flex flex-wrap align-items-center gap-2 mt-2">
               <span class="small text-secondary">Within</span>
-              <FilterChips v-model="nearDistance" :options="NEAR_DISTANCE_CHOICES" label="Near me distance" small />
+              <FilterChips v-model="nearDistance" :options="NEAR_DISTANCE_CHOICES" label="Distance" small />
             </div>
             <div v-if="cuisineOptions.length" class="mt-3">
               <p class="small fw-semibold text-secondary mb-2">Food options</p>
@@ -208,14 +224,14 @@ onMounted(() => {
           <h2 id="centres-heading" class="h3 mb-0">
             Hawker centres <span class="text-secondary fs-5">({{ centres.length }})</span>
           </h2>
-          <span v-if="location" class="text-secondary small">
-            Nearest first, within {{ nearDistanceKm }} km
+          <span v-if="origin" class="text-secondary small">
+            Nearest first, within {{ nearDistanceKm }} km{{ searchedPlace ? ` of ${searchedPlace.label}` : '' }}
           </span>
         </div>
 
         <div v-if="centres.length" class="row g-4">
           <div v-for="centre in centres" :key="centre._id" class="col-sm-6 col-lg-4">
-            <HawkerCentreCard :centre="centre" :distance-km="location ? distanceKm(location, centre.location) : null" />
+            <HawkerCentreCard :centre="centre" :distance-km="origin ? distanceKm(origin, centre.location) : null" />
           </div>
         </div>
         <div v-else class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2">

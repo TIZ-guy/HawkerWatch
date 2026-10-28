@@ -1,4 +1,6 @@
 // The user's location and distances. Used by Near me, the Explore Map distance filter and the report location check.
+import axios from 'axios'
+import { API_URL, toError } from './apiClient.js'
 
 // Resolves to { lat, lng, accuracy } (accuracy in metres).
 // fresh: true asks for a new reading instead of one the browser remembered, which reports need.
@@ -40,3 +42,14 @@ export function formatDistance(km) {
 // Choices for "within X km", shared by the home page and Explore Map.
 export const DISTANCE_OPTIONS_KM = [1, 5, 10]
 export const DEFAULT_DISTANCE_KM = 5
+
+// Finds a postal code, address or place in Singapore (OneMap, through our backend's GET /api/geocode).
+// Resolves to up to 5 places: [{ name, address, postalCode, lat, lng }], best match first.
+export async function searchPlaces(text) {
+  try {
+    const response = await axios.get(`${API_URL}/geocode`, { params: { q: text } })
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}

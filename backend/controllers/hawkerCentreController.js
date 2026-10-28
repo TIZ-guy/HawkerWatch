@@ -1,7 +1,7 @@
 import HawkerCentre from '../models/HawkerCentre.js';
 import Stall from '../models/Stall.js';
 import { STATUS_VALUES, REPORT_TTL_MINUTES } from '../utils/constants.js';
-import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor } from '../utils/hawkerUtils.js';
+import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor, getStallCounts, stallCountFor } from '../utils/hawkerUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -9,6 +9,7 @@ import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor }
 // ============================================================
 // GET /api/hawker-centres
 // Optional query: search, lat, lng, radius (metres, default 2000)
+// Each centre has stallCount: how many stalls are listed in HawkerWatch right now.
 // ============================================================
 
 export const getHawkerCentres = async (req, res, next) => {
@@ -46,7 +47,14 @@ export const getHawkerCentres = async (req, res, next) => {
             centres = await HawkerCentre.find(filter).sort({ name: 1 }).lean();
         }
 
-        res.status(200).json({ success: true, data: centres });
+        const counts = await getStallCounts(centres.map(centre => centre._id));
+
+        const data = centres.map(centre => ({
+            ...centre,
+            stallCount: stallCountFor(counts, centre._id)
+        }));
+
+        res.status(200).json({ success: true, data });
     } catch (error) {
         next(error);
     }
@@ -66,7 +74,9 @@ export const getHawkerCentreById = async (req, res, next) => {
             return;
         }
 
-        res.status(200).json({ success: true, data: centre });
+        const counts = await getStallCounts([centre._id]);
+
+        res.status(200).json({ success: true, data: { ...centre, stallCount: stallCountFor(counts, centre._id) } });
     } catch (error) {
         next(error);
     }

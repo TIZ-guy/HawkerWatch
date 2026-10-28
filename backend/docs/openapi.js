@@ -26,7 +26,7 @@ The browser then keeps the login cookie and sends it with the other requests on 
 | Service | Used for | Where | Status |
 |---|---|---|---|
 | [OneMap](https://www.onemap.gov.sg/apidocs/) map tiles (Singapore Land Authority) | The Explore Map basemap | Frontend, \`MapView.vue\`; public tiles, no token | In use |
-| [OneMap](https://www.onemap.gov.sg/apidocs/) search API | Turning a postal code or address into coordinates | Backend only, \`services/oneMapService.js\`; needs \`ONEMAP_TOKEN\` | Planned (stub ready) |
+| [OneMap](https://www.onemap.gov.sg/apidocs/) search API | Postal code and place search on the home page and Explore Map | Backend only, \`GET /api/geocode\` calls \`services/oneMapService.js\`; no token needed | In use |
 | [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) | Every hawker centre (name, address, location, photo, stall count) and its cleaning and works closures | Backend import, \`pnpm import:centres\`; the server also refreshes it on start-up when it is over a week old | In use |
 | Google Maps | "Directions" link on each centre page | Frontend link only; no API call | In use |
 | MongoDB Atlas | Database | Backend, \`MONGO_URI\` | In use |
@@ -46,7 +46,8 @@ export default {
     { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' }
 ,
     { name: 'Comments', description: 'Comments on a hawker centre. Authors can edit and delete their own; admins can delete any.' },
-    { name: 'Admin', description: 'Admin-only tools.' }
+    { name: 'Admin', description: 'Admin-only tools.' },
+    { name: 'Location search', description: 'Postal code, address and place search, using OneMap.' }
   ],
   components: {
     securitySchemes: {
@@ -90,6 +91,7 @@ export default {
         properties: {
           _id: { type: 'string' },
           name: { type: 'string', example: 'Adam Road Food Centre' },
+          stallCount: { type: 'integer', example: 12, description: 'Stalls listed in HawkerWatch right now (on the list and single-centre endpoints)' },
           address: { type: 'string', example: '2, Adam Road' },
           postalCode: { type: 'string', example: '289876' },
           description: { type: 'string', example: 'Built in 1974, Adam Food Centre comprises 32 cooked food stalls.' },
@@ -638,6 +640,21 @@ export default {
           401: notLoggedIn,
           403: error('Not an admin'),
           502: error('data.gov.sg could not be reached')
+        }
+      }
+    },
+
+    '/api/geocode': {
+      get: {
+        tags: ['Location search'],
+        summary: 'Find a postal code, address or place in Singapore',
+        description: 'Uses OneMap. Returns up to 5 places, best match first. Each IP can search 100 times per 15 minutes.',
+        parameters: [query('q', 'Postal code, address or place name (2 to 60 characters)', { type: 'string', example: '289876' })],
+        responses: {
+          200: ok('Places', { type: 'array', items: { type: 'object', properties: { name: { type: 'string', example: 'ADAM FOOD CENTRE' }, address: { type: 'string', example: '2 ADAM ROAD ADAM FOOD CENTRE SINGAPORE 289876' }, postalCode: { type: 'string', nullable: true, example: '289876' }, lat: { type: 'number', example: 1.3241598 }, lng: { type: 'number', example: 103.8141659 } } } }),
+          400: error('Search text missing, too short or too long'),
+          429: error('Too many searches'),
+          502: error('OneMap could not be reached')
         }
       }
     }

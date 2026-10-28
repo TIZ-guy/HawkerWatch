@@ -27,7 +27,8 @@ flowchart LR
 | Hawker-centre and stall API (search, near me, community summary) | Done |
 | Authentication (register, log in, log out, current user, change name and password) | Done |
 | Account security: password rules with live checklist, show/hide password, Caps Lock warning, failed-login limit, unique emails and names | Done |
-| Discovery frontend: home page, centre detail page and stall page | Done |
+| Discovery frontend: home page, centre detail page (with a OneMap map of the centre) and stall page | Done |
+| Live stall count: how many stalls are listed at each centre, on centre cards and the centre page | Done |
 | Favourites: API, page, heart buttons, reminder preferences | Done (reminders are saved but not sent) |
 | Profile page | Done |
 | Explore Map (OneMap basemap) | Done |
@@ -38,7 +39,7 @@ flowchart LR
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA data: all 123 hawker centres (address, location, photo, stall count) and their closures, imported from data.gov.sg and refreshed weekly | Done |
 | Stalls added by users (no official stall list exists); the person who added a stall or an admin can edit it, admins can remove it | Done |
-| OneMap address search | Backend stub only |
+| Postal code and place search (OneMap, no token needed) on the home page and Explore Map: centres nearest to the place, with the same 1 / 5 / 10 km distances as Near me | Done |
 | Centre comments: post, edit and delete your own; admins can delete any | Done |
 | Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
 | Review photos: up to 4 per review (shrunk in the browser, stored in MongoDB); a self-scrolling slideshow on the stall page links each photo to its review | Done |
@@ -127,8 +128,8 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | PATCH | `/api/auth/me` | `{ name }`; login required |
 | PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required; same rules as register for the new password |
 | POST | `/api/auth/logout` | Clears the login cookie |
-| GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first |
-| GET | `/api/hawker-centres/:id` | Includes official `closures` |
+| GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first; each centre has `stallCount` (stalls listed now) |
+| GET | `/api/hawker-centres/:id` | Includes official `closures` and `stallCount` |
 | GET | `/api/hawker-centres/:id/stalls` | Optional `search`, `cuisine`; each stall has its newest live report as `liveReport` and its star rating as `rating: { average, count }` |
 | POST | `/api/hawker-centres/:id/stalls` | `{ name, cuisine, unitNumber }` (cuisine and unit number optional, unit like `01-23`); login required; 409 for a name or unit number already used there; rate limited |
 | GET | `/api/hawker-centres/:id/community-summary` | Live report counts by status |
@@ -151,6 +152,7 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | PATCH | `/api/reviews/:id` | `{ rating, text }`; login required; author only |
 | DELETE | `/api/reviews/:id` | Login required; author or admin; also deletes the review's photos |
 | POST | `/api/admin/import-centres` | Admins only; imports the NEA centres and closures now |
+| GET | `/api/geocode?q=289876` | Postal code, address or place search through OneMap; up to 5 places `{ name, address, postalCode, lat, lng }`; rate limited |
 | POST | `/api/reviews/:id/photos` | `multipart/form-data` with images in `photos`; JPEG, PNG or WebP, up to 2 MB each, 4 per review; login required; author only; rate limited |
 | DELETE | `/api/reviews/:id/photos/:photoId` | Login required; author or admin |
 | GET | `/api/review-photos/:id` | The image itself, for `<img src>` |

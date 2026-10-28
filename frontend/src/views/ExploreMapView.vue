@@ -1,28 +1,22 @@
 <script setup>
 // Explore Map: every hawker centre on the OneMap basemap, coloured by official closure status.
 // The map images come from OneMap's public tile service, which needs no token.
-// Searching OneMap (which does need a token) stays in the backend's oneMapService.
+// Distances are measured from the user's location, or from a postal code / place they search for
+// (found with OneMap through our backend's GET /api/geocode).
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import HawkerCentreCard from '../components/HawkerCentreCard.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FilterChips from '../components/FilterChips.vue'
+import PlaceSearch from '../components/PlaceSearch.vue'
+import { ONEMAP_ATTRIBUTION, ONEMAP_TILES, SINGAPORE_CENTRE } from '../utils/onemap.js'
 import { getHawkerCentres } from '../services/hawkerService.js'
 import { currentClosure, daysUntil, upcomingClosures } from '../utils/closures.js'
 import { DISTANCE_OPTIONS_KM, distanceKm, formatDistance, getCurrentPosition } from '../services/locationService.js'
 
-const SINGAPORE_CENTRE = [1.3521, 103.8198]
 const SINGAPORE_BOUNDS = L.latLngBounds([1.144, 103.535], [1.494, 104.502])
 const UPCOMING_DAYS = 7
-
-const ONEMAP_TILES = 'https://www.onemap.gov.sg/maps/tiles/Default/{z}/{x}/{y}.png'
-// Attribution as OneMap's terms of use ask for it
-const ONEMAP_ATTRIBUTION =
-  '<img src="https://www.onemap.gov.sg/web-assets/images/logo/om_logo.png" style="height:20px;width:20px;" alt="" />' +
-  '&nbsp;<a href="https://www.onemap.gov.sg/" target="_blank" rel="noopener noreferrer">OneMap</a>' +
-  '&nbsp;&copy;&nbsp;contributors&nbsp;&#124;&nbsp;' +
-  '<a href="https://www.sla.gov.sg/" target="_blank" rel="noopener noreferrer">Singapore Land Authority</a>'
 
 // Bootstrap's danger / warning / success colours, so markers match the closure badges
 const MARKER_STYLES = {
@@ -43,9 +37,12 @@ const loading = ref(true)
 const errorMessage = ref('')
 const selectedId = ref('')
 
-const location = ref(null)
+const location = ref(null) // where distances are measured from: { lat, lng }
 const locating = ref(false)
 const locationError = ref('')
+// A postal code or place the user searched for ({ lat, lng, label, ... }), or null when using their own location
+const searchedPlace = ref(null)
+const originName = computed(() => (searchedPlace.value ? searchedPlace.value.label : 'you'))
 
 // Leaflet objects are kept outside Vue's reactivity; Vue doesn't need to track them.
 let map = null
@@ -130,27 +127,49 @@ function addMarkers() {
   }
 }
 
+// Puts the blue pin on `point` ({ lat, lng }) and measures distances from it.
+// Returns false (with a message) when the point is outside Singapore.
+function setOrigin(point, label) {
+  const latLng = L.latLng(point.lat, point.lng)
+  if (!SINGAPORE_BOUNDS.contains(latLng)) {
+    locationError.value = "That's outside Singapore, so the map can't centre on it."
+    return false
+  }
+  location.value = { lat: point.lat, lng: point.lng }
+  userMarker?.remove()
+  userMarker = L.circleMarker(latLng, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#0d6efd', fillOpacity: 1 })
+    .bindTooltip(label)
+    .addTo(map)
+  if (!radiusKm.value) map.flyTo(latLng, 15)
+  return true
+}
+
 async function locate() {
   locating.value = true
   locationError.value = ''
   try {
     const position = await getCurrentPosition()
-    const latLng = L.latLng(position.lat, position.lng)
-    if (!SINGAPORE_BOUNDS.contains(latLng)) {
-      locationError.value = "You seem to be outside Singapore, so the map can't centre on you."
-      return
-    }
-    location.value = position
-    userMarker?.remove()
-    userMarker = L.circleMarker(latLng, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#0d6efd', fillOpacity: 1 })
-      .bindTooltip('You are here')
-      .addTo(map)
-    if (!radiusKm.value) map.flyTo(latLng, 14)
+    if (setOrigin(position, 'You are here')) searchedPlace.value = null
   } catch (error) {
     locationError.value = error.message
   } finally {
     locating.value = false
   }
+}
+
+// A postal code or place was found: measure distances from it instead of from the user
+function usePlace(place) {
+  locationError.value = ''
+  if (setOrigin(place, place.label)) searchedPlace.value = place
+}
+
+// Back to no starting point: every centre, A to Z
+function clearPlace() {
+  searchedPlace.value = null
+  location.value = null
+  userMarker?.remove()
+  userMarker = null
+  distanceChoice.value = 'all'
 }
 
 // Shows only the markers inside the chosen distance, with the radius drawn around the user.
@@ -239,15 +258,20 @@ onBeforeUnmount(() => {
             {{ style.label }}
           </li>
           <li class="list-inline-item">
-            <span class="legend-dot legend-you" aria-hidden="true"></span>You
+            <span class="legend-dot legend-you" aria-hidden="true"></span>You / searched place
           </li>
         </ul>
       </div>
 
       <aside class="col-lg-4 d-grid gap-3 align-content-start">
         <div>
-          <p class="small fw-semibold text-secondary mb-2">Distance from you</p>
-          <FilterChips v-model="distanceChoice" :options="DISTANCE_CHOICES" label="Distance from you" />
+          <p class="small fw-semibold text-secondary mb-2">Find centres near a postal code</p>
+          <PlaceSearch :place="searchedPlace" input-id="map-place-search" v-on:picked="usePlace" v-on:cleared="clearPlace" />
+        </div>
+
+        <div>
+          <p class="small fw-semibold text-secondary mb-2">Distance from {{ originName }}</p>
+          <FilterChips v-model="distanceChoice" :options="DISTANCE_CHOICES" :label="`Distance from ${originName}`" />
         </div>
 
         <div>
@@ -274,7 +298,7 @@ onBeforeUnmount(() => {
             </h2>
           </div>
           <p v-if="!visibleCentres.length" class="small text-secondary px-3 mb-3">
-            No hawker centres within {{ radiusKm }} km of you. Try a bigger distance.
+            No hawker centres within {{ radiusKm }} km of {{ originName }}. Try a bigger distance.
           </p>
           <div class="list-group list-group-flush centre-list">
             <button
