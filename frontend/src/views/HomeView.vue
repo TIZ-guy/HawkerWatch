@@ -7,12 +7,11 @@ import StallCard from '../components/StallCard.vue'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import PlaceSearch from '../components/PlaceSearch.vue'
-import { getCommunitySummary, getHawkerCentres, getStalls } from '../services/hawkerService.js'
+import { getHawkerCentres, getStalls } from '../services/hawkerService.js'
 import { currentClosure } from '../utils/closures.js'
 import { DEFAULT_DISTANCE_KM, DISTANCE_OPTIONS_KM, distanceKm, getCurrentPosition } from '../services/locationService.js'
 
 const SEARCH_DELAY_MS = 300
-const SUMMARY_CACHE_MS = 2 * 60 * 1000
 const MAX_CUISINE_CHIPS = 10
 
 const QUICK_FILTERS = [
@@ -60,6 +59,12 @@ watch(search, (value) => {
   searchTimer = setTimeout(() => { debouncedSearch.value = value }, SEARCH_DELAY_MS)
 })
 
+// Find (or Enter) searches straight away instead of waiting for the pause
+function searchNow() {
+  clearTimeout(searchTimer)
+  debouncedSearch.value = search.value
+}
+
 watch(nearMe, async (on) => {
   locationError.value = ''
   if (!on) {
@@ -79,17 +84,6 @@ watch(nearMe, async (on) => {
 function usePlace(place) {
   searchedPlace.value = place
   quickFilters.value = quickFilters.value.filter((filter) => filter !== 'near')
-}
-
-// The list endpoint has no live-update counts, so "Has live updates" asks for each centre's
-// summary. Answers are reused for a couple of minutes to avoid repeating the same requests.
-const summaryCache = new Map()
-function getSummary(centreId) {
-  const cached = summaryCache.get(centreId)
-  if (cached && Date.now() - cached.at < SUMMARY_CACHE_MS) return cached.promise
-  const promise = getCommunitySummary(centreId).catch(() => null)
-  summaryCache.set(centreId, { at: Date.now(), promise })
-  return promise
 }
 
 // Centres come from every filter combined. Stalls (shown when searching or picking a cuisine)
@@ -112,14 +106,12 @@ async function loadResults() {
     ])
 
     const cuisineCentreIds = cuisineStalls && new Set(cuisineStalls.map((stall) => stall.hawkerCentre?._id))
-    let allowed = pool.filter((centre) =>
+    // liveStallCount comes with each centre in the list, so "Has live updates" needs no extra requests
+    const allowed = pool.filter((centre) =>
       (!openOnly.value || !currentClosure(centre.closures)) &&
+      (!liveOnly.value || centre.liveStallCount > 0) &&
       (!cuisineCentreIds || cuisineCentreIds.has(centre._id))
     )
-    if (liveOnly.value) {
-      const summaries = await Promise.all(allowed.map((centre) => getSummary(centre._id)))
-      allowed = allowed.filter((_, index) => summaries[index]?.stallsReported > 0)
-    }
 
     if (request !== latestRequest) return // a newer search has started
     const allowedIds = new Set(allowed.map((centre) => centre._id))
@@ -182,10 +174,18 @@ onMounted(() => {
               v-model="search"
               label="Find a centre or stall"
               placeholder="Search hawker centres or stalls"
+              find-button
+              @submit="searchNow"
             />
             <FilterChips v-model="quickFilters" class="mt-3" :options="QUICK_FILTERS" multiple label="Quick filters" />
-            <p class="small fw-semibold text-secondary mt-3 mb-2">Or find centres near a postal code</p>
-            <PlaceSearch :place="searchedPlace" input-id="home-place-search" v-on:picked="usePlace" v-on:cleared="searchedPlace = null" />
+            <PlaceSearch
+              class="mt-4"
+              :place="searchedPlace"
+              input-id="home-place-search"
+              label="Or find centres near a postal code"
+              v-on:picked="usePlace"
+              v-on:cleared="searchedPlace = null"
+            />
             <div v-if="nearMe || searchedPlace" class="d-flex flex-wrap align-items-center gap-2 mt-2">
               <span class="small text-secondary">Within</span>
               <FilterChips v-model="nearDistance" :options="NEAR_DISTANCE_CHOICES" label="Distance" small />

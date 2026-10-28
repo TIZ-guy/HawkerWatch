@@ -36,6 +36,7 @@ test('GET /api/hawker-centres returns the centres, each with how many stalls are
         { _id: '64b7f0c2a1b2c3d4e5f6071b', name: 'Empty Centre' }
     ]));
     const aggregate = t.mock.method(Stall, 'aggregate', async () => [{ _id: CENTRE_ID, count: 12 }]);
+    t.mock.method(StatusReport, 'aggregate', async () => []);
 
     const base = await startServer(t);
     const body = await (await fetch(`${base}/api/hawker-centres`)).json();
@@ -47,6 +48,29 @@ test('GET /api/hawker-centres returns the centres, each with how many stalls are
     assert.equal(body.data[1].stallCount, 0); // no stalls added yet
     // Only stalls that haven't been removed are counted
     assert.equal(aggregate.mock.calls[0].arguments[0][0].$match.isActive, true);
+});
+
+test('GET /api/hawker-centres includes how many stalls have live updates', async (t) => {
+    t.mock.method(HawkerCentre, 'find', () => fakeQuery([
+        { _id: CENTRE_ID, name: 'Busy Centre' },
+        { _id: '64b7f0c2a1b2c3d4e5f6071b', name: 'Quiet Centre' }
+    ]));
+    t.mock.method(Stall, 'aggregate', async () => []);
+    const aggregate = t.mock.method(StatusReport, 'aggregate', async () => [{ _id: CENTRE_ID, count: 2 }]);
+
+    const base = await startServer(t);
+    const body = await (await fetch(`${base}/api/hawker-centres`)).json();
+
+    assert.equal(body.data[0].liveStallCount, 2);
+    assert.equal(body.data[1].liveStallCount, 0);
+
+    const [match, byStall, byCentre] = aggregate.mock.calls[0].arguments[0];
+    // Same rules as the live reports shown on stall pages: not expired, not hidden by 3 flags
+    assert.ok(match.$match.expiresAt.$gt instanceof Date);
+    assert.deepEqual(match.$match['flaggedBy.2'], { $exists: false });
+    // Several reports for one stall count once
+    assert.deepEqual(byStall.$group._id, { centre: '$hawkerCentre', stall: '$stall' });
+    assert.equal(byCentre.$group._id, '$_id.centre');
 });
 
 test('GET /api/hawker-centres/:id includes how many stalls are listed', async (t) => {
@@ -62,6 +86,7 @@ test('GET /api/hawker-centres/:id includes how many stalls are listed', async (t
 test('GET /api/hawker-centres builds a search and a nearby filter', async (t) => {
     const find = t.mock.method(HawkerCentre, 'find', () => fakeQuery([]));
     t.mock.method(Stall, 'aggregate', async () => []);
+    t.mock.method(StatusReport, 'aggregate', async () => []);
 
     const base = await startServer(t);
     await fetch(`${base}/api/hawker-centres?search=chicken&lat=1.3&lng=103.8&radius=500`);

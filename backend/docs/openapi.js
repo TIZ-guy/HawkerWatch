@@ -92,6 +92,7 @@ export default {
           _id: { type: 'string' },
           name: { type: 'string', example: 'Adam Road Food Centre' },
           stallCount: { type: 'integer', example: 12, description: 'Stalls listed in HawkerWatch right now (on the list and single-centre endpoints)' },
+          liveStallCount: { type: 'integer', example: 2, description: 'Stalls with a live community report in the last 60 minutes, not hidden by flags (list endpoint only)' },
           address: { type: 'string', example: '2, Adam Road' },
           postalCode: { type: 'string', example: '289876' },
           description: { type: 'string', example: 'Built in 1974, Adam Food Centre comprises 32 cooked food stalls.' },

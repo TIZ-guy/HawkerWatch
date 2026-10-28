@@ -10,7 +10,9 @@ import { searchPlaces } from '../services/locationService.js'
 const props = defineProps({
   // The place currently in use (shown with a Clear button), or null
   place: { type: Object, default: null },
-  inputId: { type: String, default: 'place-search' }
+  inputId: { type: String, default: 'place-search' },
+  // Visible label above the box, styled like SearchBar's. Empty keeps it for screen readers only.
+  label: { type: String, default: '' }
 })
 const emit = defineEmits(['picked', 'cleared'])
 
@@ -59,20 +61,23 @@ async function search() {
 
 <template>
   <div class="place-search">
-    <!-- A place is in use: show it, with a way to remove it -->
-    <div v-if="props.place" class="d-flex flex-wrap align-items-center gap-2">
-      <span class="badge rounded-pill text-bg-light border fs-6 fw-normal">
-        <i class="bi bi-pin-map-fill text-danger me-1" aria-hidden="true"></i>{{ props.place.label }}
-      </span>
-      <button type="button" class="btn btn-link btn-sm p-0 text-secondary" v-on:click="emit('cleared')">
-        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Clear
+    <!-- Kept outside the input group: Bootstrap only rounds the first box in a group, and a hidden label there would square off the left side -->
+    <label :for="props.place ? null : inputId" :class="props.label ? 'form-label fw-semibold' : 'visually-hidden'">
+      {{ props.label || 'Postal code or place' }}
+    </label>
+
+    <!-- A place is in use: show it in the same box shape as the search, so the layout doesn't jump -->
+    <div v-if="props.place" class="input-group">
+      <span class="input-group-text bg-white"><i class="bi bi-pin-map-fill text-danger" aria-hidden="true"></i></span>
+      <span class="form-control text-truncate" :title="props.place.label">{{ props.place.label }}</span>
+      <button type="button" class="btn btn-outline-secondary" aria-label="Clear place" v-on:click="emit('cleared')">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
       </button>
     </div>
 
     <!-- Otherwise: the search box -->
     <form v-else class="input-group" role="search" v-on:submit.prevent="search">
-      <label :for="inputId" class="visually-hidden">Postal code or place</label>
-      <span class="input-group-text"><i class="bi bi-pin-map" aria-hidden="true"></i></span>
+      <span class="input-group-text bg-white"><i class="bi bi-pin-map" aria-hidden="true"></i></span>
       <input
         :id="inputId"
         v-model="text"
@@ -82,7 +87,7 @@ async function search() {
         maxlength="60"
         autocomplete="postal-code"
       />
-      <button type="submit" class="btn btn-outline-danger" :disabled="searching">
+      <button type="submit" class="btn btn-outline-secondary" :disabled="searching">
         <span v-if="searching" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
         <span :class="{ 'visually-hidden': searching }">Find</span>
       </button>

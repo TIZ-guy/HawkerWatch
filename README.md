@@ -68,7 +68,7 @@ Then edit `backend/.env`:
 - `MONGO_DB_NAME`: set your own name, e.g. `hawker-watch-yourname`. `pnpm seed` deletes and refills the whole database, so without this you would wipe the shared team data.
 - `JWT_SECRET`: any long random text for local development.
 
-The frontend runs at http://localhost:5173 and the API runs at http://localhost:8000 (the class convention). If your `backend/.env` still says `PORT=3000` from before, change it to `8000`. In development Vite forwards `/api` requests to the backend, so the frontend needs no `.env` file. Set `VITE_API_URL` in `frontend/.env` only if the API is hosted somewhere else.
+The frontend runs at http://localhost:5173 and the API runs at http://localhost:3000. (The class convention is port 8000; the team will switch together later, changing `PORT` in `backend/.env`, `backend/.env.example`, `backend/server.js` and the proxy in `frontend/vite.config.js` at the same time.) In development Vite forwards `/api` requests to the backend, so the frontend needs no `.env` file. Set `VITE_API_URL` in `frontend/.env` only if the API is hosted somewhere else.
 
 ## Commands
 

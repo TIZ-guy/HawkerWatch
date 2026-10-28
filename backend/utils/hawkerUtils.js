@@ -15,13 +15,16 @@ export function contains(text) {
 // Newest first. The user ids are left out so they are not sent to the frontend.
 // Reports flagged by FLAG_HIDE_THRESHOLD or more users are hidden too (Eugene's rule in reportUtils.js):
 // "flaggedBy.2 doesn't exist" means the flaggedBy list has fewer than 3 entries.
+function liveReportFilter() {
+    return {
+        expiresAt: { $gt: new Date() },
+        [`flaggedBy.${FLAG_HIDE_THRESHOLD - 1}`]: { $exists: false }
+    };
+}
+
 export function getLiveReports(filter) {
     return StatusReport
-        .find({
-            ...filter,
-            expiresAt: { $gt: new Date() },
-            [`flaggedBy.${FLAG_HIDE_THRESHOLD - 1}`]: { $exists: false }
-        })
+        .find({ ...filter, ...liveReportFilter() })
         .sort({ createdAt: -1 })
         .select('-user -flaggedBy')
         .lean();
@@ -83,4 +86,22 @@ export async function getStallCounts(centreIds) {
 // The number of stalls listed at one centre (0 when none)
 export function stallCountFor(counts, centreId) {
     return counts[String(centreId)] || 0;
+}
+
+// How many stalls at each centre in `centreIds` have a live community report, using the same
+// rules as getLiveReports (not expired, not hidden by flags). Several reports for one stall count once,
+// matching stallsReported in the community summary.
+// Returns an object of centreId -> count; read it with stallCountFor (0 when none).
+export async function getLiveStallCounts(centreIds) {
+    const groups = await StatusReport.aggregate([
+        { $match: { hawkerCentre: { $in: centreIds }, ...liveReportFilter() } },
+        { $group: { _id: { centre: '$hawkerCentre', stall: '$stall' } } },
+        { $group: { _id: '$_id.centre', count: { $sum: 1 } } }
+    ]);
+
+    const counts = {};
+    for (const group of groups) {
+        counts[String(group._id)] = group.count;
+    }
+    return counts;
 }
