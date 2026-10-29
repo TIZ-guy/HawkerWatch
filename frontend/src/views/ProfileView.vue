@@ -167,8 +167,9 @@ onMounted(async () => {
           <div class="card-body p-4">
             <h2 id="alerts-heading" class="h5 mb-1">Favourite reminders</h2>
             <p class="small text-secondary mb-3">
-              Choose when you usually visit each favourite. Your choices are saved for upcoming reminders;
-              HawkerWatch doesn't send notifications yet.
+              Choose when you usually visit each favourite. At that time the
+              <i class="bi bi-bell" aria-label="bell"></i> in the menu shows one reminder listing every favourite
+              set for it, while HawkerWatch is open.
             </p>
 
             <LoadingState v-if="loadingFavourites" message="Loading your favourites..." />
