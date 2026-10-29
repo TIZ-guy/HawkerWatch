@@ -9,6 +9,7 @@
     "test": "pnpm --dir backend test",
     "test:unit": "pnpm --dir frontend test:unit --run",
     "build": "pnpm --dir frontend build",
+    "lint": "pnpm --dir frontend lint",
     "seed": "pnpm --dir backend seed",
     "import:centres": "pnpm --dir backend import:centres"
   },
