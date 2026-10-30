@@ -1,7 +1,7 @@
 import HawkerCentre from '../models/HawkerCentre.js';
 import Stall from '../models/Stall.js';
 import { STATUS_VALUES, REPORT_TTL_MINUTES } from '../utils/constants.js';
-import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor, getStallCounts, stallCountFor, getLiveStallCounts } from '../utils/hawkerUtils.js';
+import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor, getStallCounts, stallCountFor, getCentreStallInfo, getCentreLiveInfo } from '../utils/hawkerUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -10,7 +10,8 @@ import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor, 
 // GET /api/hawker-centres
 // Optional query: search, lat, lng, radius (metres, default 2000)
 // Each centre has stallCount: how many stalls are listed in HawkerWatch right now,
-// and liveStallCount: how many of them have a live community report (for the "Has live updates" filter).
+// cuisines: the categories of those stalls (e.g. ['Chinese', 'Malay']),
+// and live: { stallsReported, latestStatus, latestReportAt } from live community reports, or null.
 // ============================================================
 
 export const getHawkerCentres = async (req, res, next) => {
@@ -48,14 +49,19 @@ export const getHawkerCentres = async (req, res, next) => {
             centres = await HawkerCentre.find(filter).sort({ name: 1 }).lean();
         }
 
-        const centreIds = centres.map(centre => centre._id);
-        const [counts, liveCounts] = await Promise.all([getStallCounts(centreIds), getLiveStallCounts(centreIds)]);
+        const ids = centres.map(centre => centre._id);
+        const stallInfo = await getCentreStallInfo(ids);
+        const liveInfo = await getCentreLiveInfo(ids);
 
-        const data = centres.map(centre => ({
-            ...centre,
-            stallCount: stallCountFor(counts, centre._id),
-            liveStallCount: stallCountFor(liveCounts, centre._id)
-        }));
+        const data = centres.map(centre => {
+            const stalls = stallInfo[String(centre._id)];
+            return {
+                ...centre,
+                stallCount: stalls ? stalls.count : 0,
+                cuisines: stalls ? stalls.cuisines : [],
+                live: liveInfo[String(centre._id)] || null
+            };
+        });
 
         res.status(200).json({ success: true, data });
     } catch (error) {
@@ -88,7 +94,7 @@ export const getHawkerCentreById = async (req, res, next) => {
 
 // ============================================================
 // GET /api/hawker-centres/:id/stalls
-// Optional query: search, cuisine
+// Optional query: search (stall name or dish), cuisine (exact category, e.g. "Chinese")
 // Each stall has its newest live community report as liveReport (or null),
 // and its star rating as rating: { average, count }.
 // ============================================================
@@ -105,10 +111,11 @@ export const getHawkerCentreStalls = async (req, res, next) => {
         const filter = { hawkerCentre: id, isActive: true };
 
         if (req.query.search) {
-            filter.name = contains(req.query.search);
+            filter.$or = [{ name: contains(req.query.search) }, { speciality: contains(req.query.search) }];
         }
-        if (req.query.cuisine) {
-            filter.cuisine = contains(req.query.cuisine);
+        // Only plain text is used, so a query like cuisine[$ne]=x can't reach the database as an operator
+        if (typeof req.query.cuisine === 'string' && req.query.cuisine) {
+            filter.cuisine = req.query.cuisine;
         }
 
         const stalls = await Stall.find(filter).sort({ name: 1 }).lean();

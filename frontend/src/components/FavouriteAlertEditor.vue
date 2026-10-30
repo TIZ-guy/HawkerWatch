@@ -70,7 +70,7 @@ async function save() {
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
       <div>
         <span class="fw-semibold">{{ name }}</span>
-        <span class="badge text-bg-light border ms-2">{{ typeLabel }}</span>
+        <span class="badge hw-tag fw-normal ms-2">{{ typeLabel }}</span>
       </div>
       <div class="form-check form-switch mb-0">
         <input :id="`${idPrefix}-enabled`" v-model="enabled" class="form-check-input" type="checkbox" role="switch" />
@@ -102,11 +102,11 @@ async function save() {
     </fieldset>
 
     <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
-      <button type="submit" class="btn btn-sm btn-danger" :disabled="!changed || saving">
+      <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="!changed || saving">
         {{ saving ? 'Saving...' : 'Save reminder' }}
       </button>
-      <span v-if="message" class="small text-success" role="status">{{ message }}</span>
-      <span v-if="errorMessage" class="small text-danger" role="alert">{{ errorMessage }}</span>
+      <span v-if="message" class="small text-secondary" role="status">{{ message }}</span>
+      <span v-if="errorMessage" class="small text-brick" role="alert">{{ errorMessage }}</span>
     </div>
   </form>
 </template>

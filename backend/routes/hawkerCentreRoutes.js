@@ -9,6 +9,7 @@ import {
 } from '../controllers/hawkerCentreController.js';
 import { getCentreComments, addComment } from '../controllers/commentController.js';
 import { addStall } from '../controllers/stallController.js';
+import { getCentreReviews } from '../controllers/reviewController.js';
 // Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -41,6 +42,8 @@ router.get('/:id/stalls', getHawkerCentreStalls);
 router.post('/:id/stalls', protect, stallLimiter, addStall);
 
 router.get('/:id/community-summary', getCommunitySummary);
+
+router.get('/:id/reviews', getCentreReviews);
 
 router.get('/:id/comments', getCentreComments);
 

@@ -3,15 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import axios from 'axios';
-import app from '../app.js';
-
-// Starts the real app on a free port.
-async function startServer(t) {
-    const server = app.listen(0);
-    t.after(() => server.close());
-    await new Promise((resolve) => server.once('listening', resolve));
-    return `http://127.0.0.1:${server.address().port}`;
-}
+import { startServer } from './startServer.js';
 
 const ONEMAP_ADAM_ROAD = {
     found: 1,

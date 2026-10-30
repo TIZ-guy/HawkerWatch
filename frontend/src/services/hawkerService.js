@@ -71,7 +71,8 @@ export async function getStallReports(id) {
   }
 }
 
-// Needs a login. Adds a stall to a centre: { name, cuisine, unitNumber } (cuisine and unit number optional).
+// Needs a login. Adds a stall to a centre: { name, cuisine, speciality, unitNumber } (all but name optional).
+// cuisine is one of the categories in utils/cuisines.js; speciality is the dish, e.g. "Chicken rice".
 // 409 if the centre already has a stall with that name or unit number. Returns the new stall.
 export async function addStall(centreId, details) {
   try {
@@ -82,7 +83,7 @@ export async function addStall(centreId, details) {
   }
 }
 
-// Needs a login. The person who added the stall, or an admin, can change { name, cuisine, unitNumber }.
+// Needs a login. The person who added the stall, or an admin, can change { name, cuisine, speciality, unitNumber }.
 export async function updateStall(stallId, details) {
   try {
     const response = await axios.patch(`${API_URL}/stalls/${stallId}`, details)

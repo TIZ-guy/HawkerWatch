@@ -1,5 +1,13 @@
 // Shared values used by models, controllers and the frontend contract.
 export const STATUS_VALUES = ['OPEN', 'TEMPORARILY_CLOSED', 'SHORT_QUEUE', 'MODERATE_QUEUE', 'LONG_QUEUE']
+
+// Stall cuisine categories. Kept deliberately short so the filter chips stay usable.
+// The frontend has its own copy in frontend/src/utils/cuisines.js - keep them in step.
+export const CUISINE_VALUES = [
+    'Chinese', 'Malay', 'Indian', 'Peranakan', 'Western', 'Japanese',
+    'Korean', 'Thai', 'Vietnamese', 'Dessert', 'Drinks', 'Others'
+]
+export const SPECIALITY_MAX_LENGTH = 60
 export const ROLES = ['user', 'admin']
 
 export const REPORT_TTL_MINUTES = 60

@@ -55,7 +55,7 @@ watch(() => props.photos.length, (length) => {
 <template>
   <section
     v-if="photos.length"
-    class="photo-gallery card border-0 shadow-sm overflow-hidden"
+    class="photo-gallery hw-surface overflow-hidden"
     aria-roledescription="carousel"
     aria-label="Photos from reviews"
     v-on:mouseenter="paused = true"
@@ -162,7 +162,7 @@ watch(() => props.photos.length, (length) => {
 }
 
 .dot.active {
-  background: var(--hw-orange);
+  background: var(--line-strong);
 }
 
 @media (max-width: 576px) {

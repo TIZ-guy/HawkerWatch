@@ -11,7 +11,9 @@
     "build": "pnpm --dir frontend build",
     "lint": "pnpm --dir frontend lint",
     "seed": "pnpm --dir backend seed",
-    "import:centres": "pnpm --dir backend import:centres"
+    "import:centres": "pnpm --dir backend import:centres",
+    "import:stalls": "pnpm --dir backend import:stalls",
+    "migrate:cuisines": "pnpm --dir backend migrate:cuisines"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

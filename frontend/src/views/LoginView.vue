@@ -77,12 +77,11 @@ function startOver() {
   <main class="container py-5">
     <div class="row justify-content-center">
       <div class="col-sm-10 col-md-7 col-lg-5">
-        <span class="eyebrow">Welcome back</span>
         <h1 class="h2 fw-bold mt-2 mb-4">Log in to HawkerWatch</h1>
 
-        <div class="card border-0 shadow-sm">
-          <form v-if="!challengeToken" class="card-body p-4" novalidate @submit.prevent="submit">
-            <div v-if="error" class="alert alert-danger py-2" role="alert">{{ error }}</div>
+        <div class="hw-surface">
+          <form v-if="!challengeToken" class="p-4" novalidate @submit.prevent="submit">
+            <div v-if="error" class="alert alert-warning py-2" role="alert">{{ error }}</div>
 
             <div class="mb-3">
               <label for="login-email" class="form-label fw-semibold">Email</label>
@@ -95,14 +94,14 @@ function startOver() {
               <PasswordInput id="login-password" v-model="form.password" autocomplete="current-password" required />
             </div>
 
-            <button type="submit" class="btn btn-danger w-100" :disabled="submitting">
+            <button type="submit" class="btn hw-btn-primary w-100" :disabled="submitting">
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Logging in…' : 'Log in' }}
             </button>
           </form>
 
-          <form v-else class="card-body p-4" novalidate @submit.prevent="submitCode">
-            <div v-if="error" class="alert alert-danger py-2" role="alert">{{ error }}</div>
+          <form v-else class="p-4" novalidate @submit.prevent="submitCode">
+            <div v-if="error" class="alert alert-warning py-2" role="alert">{{ error }}</div>
 
             <h2 class="h5"><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>Two-factor login</h2>
             <p class="text-secondary small">Open your authenticator app and enter the 6-digit code for HawkerWatch.</p>
@@ -113,7 +112,7 @@ function startOver() {
                 inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456" required />
             </div>
 
-            <button type="submit" class="btn btn-danger w-100" :disabled="submitting">
+            <button type="submit" class="btn hw-btn-primary w-100" :disabled="submitting">
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Checking…' : 'Verify' }}
             </button>
@@ -125,7 +124,7 @@ function startOver() {
 
         <p class="text-center text-secondary mt-3 mb-0">
           New to HawkerWatch?
-          <RouterLink :to="{ path: '/register', query: route.query }" class="text-danger fw-semibold">Create an account</RouterLink>
+          <RouterLink :to="{ path: '/register', query: route.query }" class="text-brick fw-semibold">Create an account</RouterLink>
         </p>
       </div>
     </div>

@@ -14,10 +14,17 @@ const rules = computed(() => PASSWORD_RULES.map((rule) => ({ ...rule, met: rule.
 
 <template>
   <ul class="list-unstyled small mt-2 mb-0">
-    <li v-for="rule in rules" :key="rule.id" :class="rule.met ? 'text-success' : 'text-secondary'">
+    <li v-for="rule in rules" :key="rule.id" :class="rule.met ? 'rule-met' : 'text-secondary'">
       <i class="bi me-1" :class="rule.met ? 'bi-check-circle-fill' : 'bi-circle'" aria-hidden="true"></i>
       {{ rule.label }}
       <span class="visually-hidden">{{ rule.met ? '(done)' : '(still needed)' }}</span>
     </li>
   </ul>
 </template>
+
+<style scoped>
+/* Met rules use the "open" green from the design tokens; unmet ones stay dim */
+.rule-met {
+  color: var(--q-open);
+}
+</style>
