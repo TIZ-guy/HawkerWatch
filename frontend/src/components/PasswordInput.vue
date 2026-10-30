@@ -50,7 +50,7 @@ function checkCapsLock(event) {
         <i class="bi" :class="visible ? 'bi-eye-slash' : 'bi-eye'" aria-hidden="true"></i>
       </button>
     </div>
-    <div v-if="capsLockOn" :id="capsLockId" class="form-text text-warning-emphasis" role="status">
+    <div v-if="capsLockOn" :id="capsLockId" class="form-text text-secondary" role="status">
       <i class="bi bi-capslock-fill me-1" aria-hidden="true"></i>Caps Lock is on
     </div>
   </div>

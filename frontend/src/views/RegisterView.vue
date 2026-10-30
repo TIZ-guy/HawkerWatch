@@ -45,12 +45,11 @@ async function submit() {
   <main class="container py-5">
     <div class="row justify-content-center">
       <div class="col-sm-10 col-md-7 col-lg-5">
-        <span class="eyebrow">Join the community</span>
         <h1 class="h2 fw-bold mt-2 mb-4">Create your account</h1>
 
-        <div class="card border-0 shadow-sm">
-          <form class="card-body p-4" novalidate @submit.prevent="submit">
-            <div v-if="error" class="alert alert-danger py-2" role="alert">{{ error }}</div>
+        <div class="hw-surface">
+          <form class="p-4" novalidate @submit.prevent="submit">
+            <div v-if="error" class="alert alert-warning py-2" role="alert">{{ error }}</div>
 
             <div class="mb-3">
               <label for="register-name" class="form-label fw-semibold">Name</label>
@@ -76,7 +75,7 @@ async function submit() {
               <PasswordInput id="register-confirm" v-model="form.confirmPassword" autocomplete="new-password" required />
             </div>
 
-            <button type="submit" class="btn btn-danger w-100" :disabled="submitting">
+            <button type="submit" class="btn hw-btn-primary w-100" :disabled="submitting">
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Creating account…' : 'Create account' }}
             </button>
@@ -85,7 +84,7 @@ async function submit() {
 
         <p class="text-center text-secondary mt-3 mb-0">
           Already have an account?
-          <RouterLink :to="{ path: '/login', query: route.query }" class="text-danger fw-semibold">Log in</RouterLink>
+          <RouterLink :to="{ path: '/login', query: route.query }" class="text-brick fw-semibold">Log in</RouterLink>
         </p>
       </div>
     </div>

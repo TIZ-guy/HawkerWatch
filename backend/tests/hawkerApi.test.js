@@ -2,7 +2,7 @@
 // so these tests run without MongoDB (the same way CI runs them).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import app from '../app.js';
+import { startServer } from './startServer.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import Stall from '../models/Stall.js';
 import StatusReport from '../models/StatusReport.js';
@@ -22,20 +22,15 @@ function fakeQuery(result) {
     };
 }
 
-// Starts the real app on a free port.
-async function startServer(t) {
-    const server = app.listen(0);
-    t.after(() => server.close());
-    await new Promise((resolve) => server.once('listening', resolve));
-    return `http://127.0.0.1:${server.address().port}`;
-}
-
-test('GET /api/hawker-centres returns the centres, each with how many stalls are listed', async (t) => {
+test('GET /api/hawker-centres returns the centres, each with stalls listed, cuisines and live reports', async (t) => {
     t.mock.method(HawkerCentre, 'find', () => fakeQuery([
         { _id: CENTRE_ID, name: 'Test Centre', location: { coordinates: [103.8, 1.3] } },
         { _id: '64b7f0c2a1b2c3d4e5f6071b', name: 'Empty Centre' }
     ]));
-    const aggregate = t.mock.method(Stall, 'aggregate', async () => [{ _id: CENTRE_ID, count: 12 }]);
+    const aggregate = t.mock.method(Stall, 'aggregate', async () => [{ _id: CENTRE_ID, count: 12, cuisines: ['Drinks', 'Chinese', null] }]);
+    const reportAggregate = t.mock.method(StatusReport, 'aggregate', async () => [
+        { _id: CENTRE_ID, latestStatus: 'LONG_QUEUE', latestReportAt: '2026-10-30T04:00:00.000Z', stalls: [STALL_ID, 'other-stall'] }
+    ]);
 
     const base = await startServer(t);
     const body = await (await fetch(`${base}/api/hawker-centres`)).json();
@@ -47,6 +42,13 @@ test('GET /api/hawker-centres returns the centres, each with how many stalls are
     assert.equal(body.data[1].stallCount, 0); // no stalls added yet
     // Only stalls that haven't been removed are counted
     assert.equal(aggregate.mock.calls[0].arguments[0][0].$match.isActive, true);
+
+    assert.deepEqual(body.data[0].cuisines, ['Chinese', 'Drinks']); // fixed category order; stalls without one skipped
+    assert.deepEqual(body.data[1].cuisines, []);
+    assert.deepEqual(body.data[0].live, { stallsReported: 2, latestStatus: 'LONG_QUEUE', latestReportAt: '2026-10-30T04:00:00.000Z' });
+    assert.equal(body.data[1].live, null); // no live reports
+    // Only reports that haven't expired are counted
+    assert.ok(reportAggregate.mock.calls[0].arguments[0][0].$match.expiresAt.$gt instanceof Date);
 });
 
 test('GET /api/hawker-centres/:id includes how many stalls are listed', async (t) => {
@@ -62,6 +64,7 @@ test('GET /api/hawker-centres/:id includes how many stalls are listed', async (t
 test('GET /api/hawker-centres builds a search and a nearby filter', async (t) => {
     const find = t.mock.method(HawkerCentre, 'find', () => fakeQuery([]));
     t.mock.method(Stall, 'aggregate', async () => []);
+    t.mock.method(StatusReport, 'aggregate', async () => []);
 
     const base = await startServer(t);
     await fetch(`${base}/api/hawker-centres?search=chicken&lat=1.3&lng=103.8&radius=500`);

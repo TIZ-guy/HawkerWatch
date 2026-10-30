@@ -3,11 +3,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import axios from 'axios';
-import app from '../app.js';
+import { startServer } from './startServer.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import ImportLog from '../models/ImportLog.js';
 import Stall from '../models/Stall.js';
 import User from '../models/User.js';
+import Review from '../models/Review.js';
 import { AUTH_COOKIE, signToken } from '../utils/authToken.js';
 import { checkStallDetails, normaliseUnitNumber } from '../utils/stallUtils.js';
 
@@ -19,14 +20,6 @@ const STALL_ID = '64b7f0c2a1b2c3d4e5f60719';
 const adder = { _id: '64b7f0c2a1b2c3d4e5f60730', name: 'Adder', role: 'user' };
 const otherUser = { _id: '64b7f0c2a1b2c3d4e5f60731', name: 'Someone Else', role: 'user' };
 const admin = { _id: '64b7f0c2a1b2c3d4e5f60732', name: 'Admin', role: 'admin' };
-
-// Starts the real app on a free port.
-async function startServer(t) {
-    const server = app.listen(0);
-    t.after(() => server.close());
-    await new Promise((resolve) => server.once('listening', resolve));
-    return `http://127.0.0.1:${server.address().port}`;
-}
 
 // Logs `user` in: protect() looks the user up again, so User.findById returns them.
 function loginAs(t, user) {
@@ -40,12 +33,13 @@ function savedStall(t) {
         _id: STALL_ID,
         hawkerCentre: CENTRE_ID,
         name: 'Ah Hock Chicken Rice',
-        cuisine: 'Chicken rice',
+        cuisine: 'Chinese',
+        speciality: 'Chicken rice',
         unitNumber: '01-23',
         isActive: true,
         addedBy: adder._id,
         save: t.mock.fn(async () => {}),
-        toObject() { return { _id: this._id, name: this.name, cuisine: this.cuisine, unitNumber: this.unitNumber }; }
+        toObject() { return { _id: this._id, name: this.name, cuisine: this.cuisine, speciality: this.speciality, unitNumber: this.unitNumber }; }
     };
     t.mock.method(Stall, 'findById', async () => stall);
     return stall;
@@ -68,8 +62,12 @@ test('normaliseUnitNumber accepts common ways of writing a unit number', () => {
 });
 
 test('checkStallDetails cleans up the details and rejects bad ones', () => {
-    assert.deepEqual(checkStallDetails({ name: '  Ah   Hock ', cuisine: '', unitNumber: '#1-23' }, { nameRequired: true }),
-        { details: { name: 'Ah Hock', cuisine: undefined, unitNumber: '01-23' } });
+    assert.deepEqual(checkStallDetails({ name: '  Ah   Hock ', cuisine: '', speciality: '  Chicken   rice ', unitNumber: '#1-23' }, { nameRequired: true }),
+        { details: { name: 'Ah Hock', cuisine: undefined, speciality: 'Chicken rice', unitNumber: '01-23' } });
+    assert.deepEqual(checkStallDetails({ cuisine: 'chinese', speciality: '' }, { nameRequired: false }),
+        { details: { cuisine: 'Chinese', speciality: undefined } }); // any capitals; empty dish clears it
+    assert.match(checkStallDetails({ cuisine: 'Chicken rice' }, { nameRequired: false }).message, /must be one of/);
+    assert.ok(checkStallDetails({ speciality: 'x'.repeat(61) }, { nameRequired: false }).message);
     assert.ok(checkStallDetails({}, { nameRequired: true }).message); // name is required when adding
     assert.deepEqual(checkStallDetails({}, { nameRequired: false }), { details: {} }); // nothing to change when editing
     assert.ok(checkStallDetails({ name: 'A' }, { nameRequired: true }).message);
@@ -93,7 +91,7 @@ test('POST /api/hawker-centres/:id/stalls adds a stall, remembering who added it
     const base = await startServer(t);
 
     const response = await send(`${base}/api/hawker-centres/${CENTRE_ID}/stalls`, 'POST', headers,
-        { name: 'Ah Hock Chicken Rice', cuisine: 'Chicken rice', unitNumber: '#1-23' });
+        { name: 'Ah Hock Chicken Rice', cuisine: 'Chinese', speciality: 'Chicken rice', unitNumber: '#1-23' });
     const body = await response.json();
 
     assert.equal(response.status, 201);
@@ -126,6 +124,49 @@ test('POST /api/hawker-centres/:id/stalls gives 404 for a centre that does not e
 
     const response = await send(`${base}/api/hawker-centres/${CENTRE_ID}/stalls`, 'POST', headers, { name: 'Ah Hock' });
     assert.equal(response.status, 404);
+});
+
+test('POST /api/hawker-centres/:id/stalls refuses a dish name as the cuisine', async (t) => {
+    const headers = loginAs(t, adder);
+    t.mock.method(HawkerCentre, 'exists', async () => ({ _id: CENTRE_ID }));
+    const create = t.mock.method(Stall, 'create', async () => ({}));
+    const base = await startServer(t);
+
+    const response = await send(`${base}/api/hawker-centres/${CENTRE_ID}/stalls`, 'POST', headers, { name: 'Ah Hock', cuisine: 'Chicken rice' });
+
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).message, /Cuisine must be one of: Chinese, Malay/);
+    assert.equal(create.mock.callCount(), 0);
+});
+
+test('POST /api/hawker-centres/:id/stalls saves a lowercase cuisine with the right capitals', async (t) => {
+    const headers = loginAs(t, adder);
+    t.mock.method(HawkerCentre, 'exists', async () => ({ _id: CENTRE_ID }));
+    t.mock.method(Stall, 'exists', async () => null);
+    const create = t.mock.method(Stall, 'create', async (fields) => ({ toObject: () => ({ _id: STALL_ID, ...fields }) }));
+    const base = await startServer(t);
+
+    const response = await send(`${base}/api/hawker-centres/${CENTRE_ID}/stalls`, 'POST', headers, { name: 'Ah Hock', cuisine: 'chinese' });
+
+    assert.equal(response.status, 201);
+    assert.equal(create.mock.calls[0].arguments[0].cuisine, 'Chinese');
+});
+
+test('GET /api/stalls filters by exact cuisine and searches the dish as well as the name', async (t) => {
+    const find = t.mock.method(Stall, 'find', () => ({
+        populate() { return this; },
+        sort() { return this; },
+        lean: async () => []
+    }));
+    t.mock.method(Review, 'aggregate', async () => []);
+    const base = await startServer(t);
+
+    await fetch(`${base}/api/stalls?search=laksa&cuisine=Chinese`);
+
+    const filter = find.mock.calls[0].arguments[0];
+    assert.equal(filter.cuisine, 'Chinese'); // exact, not "contains"
+    assert.equal(filter.$or.length, 2); // name or speciality
+    assert.ok(filter.$or[1].speciality.test('Penang Laksa'));
 });
 
 test('PATCH /api/stalls/:id lets the person who added it, or an admin, change the details', async (t) => {

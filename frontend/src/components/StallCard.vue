@@ -125,16 +125,18 @@ function onReported(report) {
 </script>
 
 <template>
-  <article class="card border-0 shadow-sm h-100">
-    <div class="card-body p-3 p-lg-4">
+  <article class="hw-surface h-100">
+    <div class="p-3 p-lg-4">
       <div v-if="!statusOnly" class="d-flex justify-content-between align-items-start gap-2">
         <div>
           <h3 class="h6 mb-1">
             <RouterLink :to="`/stalls/${stall._id}`" class="stall-link">{{ stall.name }}</RouterLink>
           </h3>
           <p class="small text-secondary mb-0">
-            <span v-if="stall.cuisine">{{ stall.cuisine }}</span>
-            <span v-if="stall.cuisine && stall.unitNumber"> · </span>
+            <span v-if="stall.speciality">{{ stall.speciality }}</span>
+            <span v-if="stall.speciality && stall.cuisine"> · </span>
+            <span v-if="stall.cuisine" class="text-secondary">{{ stall.cuisine }}</span>
+            <span v-if="(stall.speciality || stall.cuisine) && stall.unitNumber"> · </span>
             <span v-if="stall.unitNumber">#{{ stall.unitNumber }}</span>
           </p>
           <p v-if="stall.rating && stall.rating.count > 0" class="small mt-1 mb-0">
@@ -149,7 +151,7 @@ function onReported(report) {
 
       <RouterLink
         v-if="!statusOnly && showCentre && stall.hawkerCentre?._id"
-        class="d-inline-block small mt-2 text-danger"
+        class="d-inline-block small mt-2 text-brick"
         :to="`/hawker-centres/${stall.hawkerCentre._id}#stall-${stall._id}`"
       >
         <i class="bi bi-shop me-1" aria-hidden="true"></i>{{ stall.hawkerCentre.name }}
@@ -177,18 +179,18 @@ function onReported(report) {
           <button
             v-if="!reporting"
             type="button"
-            class="btn btn-link btn-sm p-0 text-decoration-none text-danger"
+            class="btn btn-link btn-sm p-0 text-decoration-none text-brick"
             @click="startReport"
           >
             <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Report status
           </button>
         </div>
 
-        <p v-if="thanks" class="small text-success mt-2 mb-0" role="status">{{ thanks }}</p>
+        <p v-if="thanks" class="small text-secondary mt-2 mb-0" role="status">{{ thanks }}</p>
 
         <div v-if="reportsOpen" class="mt-2">
           <p v-if="reportsLoading" class="small text-secondary mb-0">Loading updates...</p>
-          <p v-else-if="reportsError" class="small text-danger mb-0">{{ reportsError }}</p>
+          <p v-else-if="reportsError" class="small text-brick mb-0">{{ reportsError }}</p>
           <template v-else-if="reports">
             <p v-if="!reports.length" class="small text-secondary mb-0">No live updates right now.</p>
             <ul class="list-unstyled small mb-0">
@@ -203,7 +205,7 @@ function onReported(report) {
                   <span v-else-if="isOwnReport(report)" class="text-secondary">Your update</span>
                   <span v-else-if="confirmingFlagId === report._id" class="d-inline-flex align-items-center gap-2">
                     <span>Flag as wrong?</span>
-                    <button type="button" class="btn btn-sm btn-danger py-0" :disabled="flaggingId === report._id" @click="confirmFlag(report._id)">
+                    <button type="button" class="btn btn-sm btn-outline-dark py-0" :disabled="flaggingId === report._id" @click="confirmFlag(report._id)">
                       {{ flaggingId === report._id ? 'Flagging...' : 'Yes' }}
                     </button>
                     <button type="button" class="btn btn-sm btn-link text-secondary p-0" @click="confirmingFlagId = ''">Cancel</button>
@@ -219,11 +221,11 @@ function onReported(report) {
                   </button>
                 </span>
 
-                <span v-if="flagError.id === report._id" class="w-100 text-danger" role="alert">{{ flagError.message }}</span>
+                <span v-if="flagError.id === report._id" class="w-100 text-brick" role="alert">{{ flagError.message }}</span>
               </li>
             </ul>
           </template>
-          <p v-if="flagMessage" class="small text-success mt-2 mb-0" role="status">{{ flagMessage }}</p>
+          <p v-if="flagMessage" class="small text-secondary mt-2 mb-0" role="status">{{ flagMessage }}</p>
         </div>
 
         <ReportStatusForm v-if="reporting" :stall="stall" :centre="centre" @submitted="onReported" @cancel="reporting = false" />
@@ -243,7 +245,7 @@ function onReported(report) {
 
 .stall-link:hover,
 .stall-link:focus {
-  color: var(--hw-orange);
+  color: var(--line-strong);
   text-decoration: underline;
 }
 </style>

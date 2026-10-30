@@ -1,7 +1,9 @@
+import { CUISINE_VALUES } from './constants.js';
+
 // Checks for the stall details users send when adding or editing a stall.
 
 export const STALL_NAME_MAX = 60;
-export const CUISINE_MAX = 40;
+export const SPECIALITY_MAX = 60;
 
 // Case-insensitive exact match, e.g. "ah hock chicken rice" matches "Ah Hock Chicken Rice".
 // The replace stops characters like ( or * from being read as part of a pattern.
@@ -18,15 +20,16 @@ export function normaliseUnitNumber(text) {
     return `${match[1].padStart(2, '0')}-${match[2].toUpperCase()}`;
 }
 
-// Checks { name, cuisine, unitNumber } from a request body.
+// Checks { name, cuisine, speciality, unitNumber } from a request body.
+// cuisine must be one of CUISINE_VALUES (any capitals); speciality is the dish, free text.
 // Returns { details } with only the fields that were sent (cleaned up), or { message } if something is wrong.
 // With nameRequired false (editing), a missing name is fine but an empty one is not.
-// An empty cuisine or unit number means "clear it", so it becomes undefined.
+// An empty cuisine, speciality or unit number means "clear it", so it becomes undefined.
 export function checkStallDetails(body, { nameRequired }) {
     const details = {};
     const input = body || {};
 
-    for (const field of ['name', 'cuisine', 'unitNumber']) {
+    for (const field of ['name', 'cuisine', 'speciality', 'unitNumber']) {
         if (field in input && input[field] !== null && typeof input[field] !== 'string') {
             return { message: `${field} must be text.` };
         }
@@ -44,11 +47,24 @@ export function checkStallDetails(body, { nameRequired }) {
     }
 
     if ('cuisine' in input) {
-        const cuisine = String(input.cuisine || '').trim().replace(/\s+/g, ' ');
-        if (cuisine.length > CUISINE_MAX) {
-            return { message: `Cuisine can be at most ${CUISINE_MAX} characters.` };
+        const text = String(input.cuisine || '').trim();
+        if (text) {
+            const cuisine = CUISINE_VALUES.find(value => value.toLowerCase() === text.toLowerCase());
+            if (!cuisine) {
+                return { message: `Cuisine must be one of: ${CUISINE_VALUES.join(', ')}.` };
+            }
+            details.cuisine = cuisine;
+        } else {
+            details.cuisine = undefined;
         }
-        details.cuisine = cuisine || undefined;
+    }
+
+    if ('speciality' in input) {
+        const speciality = String(input.speciality || '').trim().replace(/\s+/g, ' ');
+        if (speciality.length > SPECIALITY_MAX) {
+            return { message: `Dish can be at most ${SPECIALITY_MAX} characters.` };
+        }
+        details.speciality = speciality || undefined;
     }
 
     if ('unitNumber' in input) {

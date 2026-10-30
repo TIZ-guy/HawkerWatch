@@ -1,5 +1,7 @@
-// Fills the database with fictional demo data, then imports the real NEA hawker centres and closures
-// from data.gov.sg (skipped with a warning when offline). Run with: pnpm seed
+// Fills the database for development: the real NEA hawker centres and closures (from data.gov.sg, so it
+// needs internet), the stalls in data/stalls.json, demo users, and demo reports, favourites, reviews and
+// comments. The demo activity is only put on sample stalls (made-up businesses), never on real ones.
+// Run with: pnpm seed
 // Warning: this deletes existing users, centres, stalls, reports, favourites, reviews and comments.
 import 'dotenv/config'
 import fs from 'fs'
@@ -16,6 +18,7 @@ import Favourite from '../models/Favourite.js'
 import Review from '../models/Review.js'
 import ReviewPhoto from '../models/ReviewPhoto.js'
 import { importHawkerCentres } from '../services/hawkerImportService.js'
+import { importStallsFromFile, printStallSummary } from './importStalls.js'
 import Comment from '../models/Comment.js'
 import ImportLog from '../models/ImportLog.js'
 import { REPORT_TTL_MINUTES } from '../utils/constants.js'
@@ -51,7 +54,15 @@ const TWO_FACTOR_LOGIN = {
 
 const MINUTE = 60 * 1000
 const minutesAgo = (minutes) => new Date(Date.now() - minutes * MINUTE)
-const daysFromNow = (days) => new Date(Date.now() + days * 24 * 60 * MINUTE)
+
+// A stall from data/stalls.json, found by its centre's NEA serial number and its name.
+// Only sample stalls (centres with "source": "generated" in the file) are used for demo activity.
+async function sampleStall(sourceId, name) {
+  const centre = await HawkerCentre.findOne({ sourceId })
+  const stall = centre && await Stall.findOne({ hawkerCentre: centre._id, name })
+  if (!stall) throw new Error(`Sample stall "${name}" (centre ${sourceId}) not found; check data/stalls.json`)
+  return stall
+}
 
 // A report made `minutes` ago, expiring REPORT_TTL_MINUTES after that.
 function report(stall, user, status, minutes) {
@@ -91,43 +102,25 @@ async function seed() {
     }
   ])
 
-  const [kampong, riverside, seaside] = await HawkerCentre.create([
-    {
-      name: 'Kampong Demo Food Centre',
-      address: '1 Demo Road',
-      postalCode: '100001',
-      location: { coordinates: [103.8198, 1.3521] },
-      closures: [{ type: 'CLEANING', startDate: daysFromNow(5), endDate: daysFromNow(6), remarks: 'Quarterly cleaning' }]
-    },
-    {
-      name: 'Riverside Demo Market and Food Centre',
-      address: '2 Example Street',
-      postalCode: '100002',
-      location: { coordinates: [103.8454, 1.2857] }
-    },
-    {
-      name: 'Seaside Demo Hawker Centre',
-      address: '3 Sample Avenue',
-      postalCode: '100003',
-      location: { coordinates: [103.902, 1.3048] },
-      // Closed right now, so the UI can show an official closure.
-      closures: [{ type: 'OTHER_WORKS', startDate: daysFromNow(-1), endDate: daysFromNow(2), remarks: 'Repairs and redecoration' }]
-    }
-  ])
+  // The real centres and closures, then the stalls in data/stalls.json
+  console.log('Importing real hawker centres from data.gov.sg...')
+  const imported = await importHawkerCentres()
+  if (imported.status === 'FAILED') {
+    throw new Error(`could not import the hawker centres (${imported.errorMessage}). pnpm seed needs internet.`)
+  }
+  console.log(`Imported ${imported.recordsCreated + imported.recordsUpdated} real hawker centres.`)
+  console.log('Importing stalls from data/stalls.json...')
+  printStallSummary(await importStallsFromFile())
 
-  const stalls = await Stall.create([
-    { hawkerCentre: kampong._id, name: 'Ah Demo Chicken Rice', unitNumber: '01-01', cuisine: 'Chicken rice' },
-    { hawkerCentre: kampong._id, name: 'Sample Laksa', unitNumber: '01-02', cuisine: 'Laksa' },
-    { hawkerCentre: kampong._id, name: 'Test Kitchen Char Kway Teow', unitNumber: '01-03', cuisine: 'Char kway teow' },
-    { hawkerCentre: kampong._id, name: 'Mock Drinks Stall', cuisine: 'Drinks' }, // no unit number
-    { hawkerCentre: riverside._id, name: 'Placeholder Prawn Mee', unitNumber: '02-11', cuisine: 'Prawn mee' },
-    { hawkerCentre: riverside._id, name: 'Example Nasi Lemak', unitNumber: '02-12', cuisine: 'Nasi lemak' },
-    { hawkerCentre: riverside._id, name: 'Fictional Fishball Noodles', unitNumber: '02-13', cuisine: 'Fishball noodles' },
-    { hawkerCentre: seaside._id, name: 'Imaginary Satay', unitNumber: '01-20', cuisine: 'Satay' },
-    { hawkerCentre: seaside._id, name: 'Pretend Carrot Cake', unitNumber: '01-21', cuisine: 'Carrot cake' },
-    { hawkerCentre: seaside._id, name: 'Dummy Duck Rice', unitNumber: '01-22', cuisine: 'Duck rice', isActive: false }
-  ])
-  const [chickenRice, laksa, charKwayTeow, , prawnMee, nasiLemak] = stalls
+  // Sample stalls for the demo activity below. Most are at two centres, so they are easy to find:
+  // Aljunied Ave 2 Blk 117 (NEA serial 2) and Cheng San Market, Ang Mo Kio Ave 10 Blk 527 (serial 8).
+  const chickenRice = await sampleStall('2', 'Hock Lam Chicken Rice')
+  const prawnMee = await sampleStall('2', 'Soon Lee Prawn Noodle')
+  const charKwayTeow = await sampleStall('8', 'Hup Seng Char Kway Teow')
+  const laksa = await sampleStall('7', 'Hock Lam Laksa')
+  const nasiLemak = await sampleStall('5', 'Warong Pak Nasi Lemak')
+  const aljunied = await HawkerCentre.findOne({ sourceId: '2' })
+  const chengSan = await HawkerCentre.findOne({ sourceId: '8' })
 
   const reports = await StatusReport.create([
     // Live (less than 60 minutes old)
@@ -150,10 +143,10 @@ async function seed() {
       target: chickenRice._id,
       alert: { enabled: true, days: [1, 2, 3, 4, 5], time: '11:30' }
     },
-    { user: diner._id, targetType: 'HawkerCentre', target: riverside._id },
+    { user: diner._id, targetType: 'HawkerCentre', target: chengSan._id },
     { user: regular._id, targetType: 'Stall', target: laksa._id },
-    // The demo login starts with two favourites, leaving Kampong and its stalls free to favourite live
-    { user: demo._id, targetType: 'HawkerCentre', target: riverside._id },
+    // The demo login starts with two favourites, leaving most stalls free to favourite live
+    { user: demo._id, targetType: 'HawkerCentre', target: chengSan._id },
     {
       user: demo._id,
       targetType: 'Stall',
@@ -188,19 +181,10 @@ async function seed() {
   }
 
   await Comment.create([
-    { hawkerCentre: kampong._id, user: diner._id, text: 'Go before 11:30, the lunch crowd builds quickly.' },
-    { hawkerCentre: kampong._id, user: regular._id, text: 'Plenty of seats on the second floor.' },
-    { hawkerCentre: riverside._id, user: regular._id, text: 'Car park fills up on weekends.' }
+    { hawkerCentre: aljunied._id, user: diner._id, text: 'Go before 11:30, the lunch crowd builds quickly.' },
+    { hawkerCentre: aljunied._id, user: regular._id, text: 'Remember to return your tray after eating.' },
+    { hawkerCentre: chengSan._id, user: regular._id, text: 'Busiest on weekend mornings.' }
   ])
-
-  // The real centres and closures, next to the demo ones (which are marked "Demo" / "Sample" in their names)
-  console.log('Importing real hawker centres from data.gov.sg...')
-  const imported = await importHawkerCentres()
-  if (imported.status === 'FAILED') {
-    console.warn(`Real hawker centres not imported (${imported.errorMessage}). Run pnpm import:centres when online.`)
-  } else {
-    console.log(`Imported ${imported.recordsCreated + imported.recordsUpdated} real hawker centres.`)
-  }
 
   const counts = await Promise.all(seeded.map(async (Model) => `${Model.modelName}: ${await Model.countDocuments()}`))
   console.log(`Seed complete. ${counts.join(', ')}`)

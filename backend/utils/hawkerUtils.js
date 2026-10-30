@@ -2,6 +2,7 @@ import StatusReport from '../models/StatusReport.js';
 import Stall from '../models/Stall.js';
 import Review from '../models/Review.js';
 import { FLAG_HIDE_THRESHOLD } from './reportUtils.js';
+import { CUISINE_VALUES } from './constants.js';
 import { currentReviewFilter } from './reviewUtils.js';
 
 // Small helpers shared by the hawker-centre and stall controllers.
@@ -83,4 +84,58 @@ export async function getStallCounts(centreIds) {
 // The number of stalls listed at one centre (0 when none)
 export function stallCountFor(counts, centreId) {
     return counts[String(centreId)] || 0;
+}
+
+// For the centre list: how many stalls each centre has listed, and which cuisines they cover.
+// One query for all the centres. Returns an object of centreId -> { count, cuisines }.
+// cuisines follows the order of CUISINE_VALUES, e.g. ['Chinese', 'Malay', 'Drinks'].
+export async function getCentreStallInfo(centreIds) {
+    const groups = await Stall.aggregate([
+        { $match: { hawkerCentre: { $in: centreIds }, isActive: true } },
+        { $group: { _id: '$hawkerCentre', count: { $sum: 1 }, cuisines: { $addToSet: '$cuisine' } } }
+    ]);
+
+    const info = {};
+    for (const group of groups) {
+        const present = group.cuisines || [];
+        info[String(group._id)] = {
+            count: group.count,
+            cuisines: CUISINE_VALUES.filter(cuisine => present.includes(cuisine))
+        };
+    }
+    return info;
+}
+
+// For the centre list: each centre's newest live community report and how many stalls have one.
+// Uses the same rules as getLiveReports (not expired, not hidden by flags). One query for all the centres.
+// Returns an object of centreId -> { stallsReported, latestStatus, latestReportAt }. Centres with none are left out.
+export async function getCentreLiveInfo(centreIds) {
+    const groups = await StatusReport.aggregate([
+        {
+            $match: {
+                hawkerCentre: { $in: centreIds },
+                expiresAt: { $gt: new Date() },
+                [`flaggedBy.${FLAG_HIDE_THRESHOLD - 1}`]: { $exists: false }
+            }
+        },
+        { $sort: { createdAt: -1 } },
+        {
+            $group: {
+                _id: '$hawkerCentre',
+                latestStatus: { $first: '$status' },
+                latestReportAt: { $first: '$createdAt' },
+                stalls: { $addToSet: '$stall' }
+            }
+        }
+    ]);
+
+    const info = {};
+    for (const group of groups) {
+        info[String(group._id)] = {
+            stallsReported: (group.stalls || []).length,
+            latestStatus: group.latestStatus,
+            latestReportAt: group.latestReportAt
+        };
+    }
+    return info;
 }

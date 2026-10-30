@@ -87,7 +87,7 @@ async function submit() {
             :name="`report-${stall._id}`"
             :value="value"
           />
-          <label class="btn btn-sm btn-outline-secondary rounded-pill" :for="`report-${stall._id}-${value}`">
+          <label class="hw-chip" :for="`report-${stall._id}-${value}`">
             <i class="bi me-1" :class="STATUS_DISPLAY[value].icon" aria-hidden="true"></i>{{ STATUS_DISPLAY[value].label }}
           </label>
         </template>
@@ -96,15 +96,15 @@ async function submit() {
     <p class="small text-secondary mt-2 mb-2">
       Your update is shown to others for 60 minutes.
       <template v-if="settings && !settings.locationCheck">
-        <span class="badge text-bg-warning ms-1"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>Location check off (testing)</span>
+        <span class="hw-tag ms-1"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>Location check off (testing)</span>
       </template>
       <template v-else>
         You need to be at the hawker centre (within {{ settings?.maxDistanceMetres ?? 200 }} m); your location is only used for this check.
       </template>
     </p>
-    <p v-if="errorMessage" class="small text-danger mb-2" role="alert">{{ errorMessage }}</p>
+    <p v-if="errorMessage" class="small text-brick mb-2" role="alert">{{ errorMessage }}</p>
     <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-sm btn-danger" :disabled="step !== ''">
+      <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="step !== ''">
         <span v-if="step" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
         {{ step === 'locating' ? 'Checking your location...' : step === 'sending' ? 'Sending...' : 'Submit update' }}
       </button>

@@ -1,6 +1,6 @@
 // OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
 // When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
-import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS, COMMENT_MAX_LENGTH } from '../utils/constants.js'
+import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS, COMMENT_MAX_LENGTH, CUISINE_VALUES, SPECIALITY_MAX_LENGTH } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 
 const id = (name, description) => ({ name, in: 'path', required: true, description, schema: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60718' } })
@@ -92,6 +92,8 @@ export default {
           _id: { type: 'string' },
           name: { type: 'string', example: 'Adam Road Food Centre' },
           stallCount: { type: 'integer', example: 12, description: 'Stalls listed in HawkerWatch right now (on the list and single-centre endpoints)' },
+          cuisines: { type: 'array', items: { type: 'string', enum: CUISINE_VALUES }, example: ['Chinese', 'Malay'], description: 'Cuisines of the listed stalls (list endpoint only)' },
+          live: { type: 'object', nullable: true, description: 'Live community reports (list endpoint only); null when there are none', properties: { stallsReported: { type: 'integer', example: 2 }, latestStatus: { type: 'string', enum: STATUS_VALUES }, latestReportAt: { type: 'string', format: 'date-time' } } },
           address: { type: 'string', example: '2, Adam Road' },
           postalCode: { type: 'string', example: '289876' },
           description: { type: 'string', example: 'Built in 1974, Adam Food Centre comprises 32 cooked food stalls.' },
@@ -125,7 +127,8 @@ export default {
           hawkerCentre: { description: 'Centre id, or { _id, name, address } on /api/stalls endpoints', oneOf: [{ type: 'string' }, { type: 'object' }] },
           name: { type: 'string', example: 'Ah Demo Chicken Rice' },
           unitNumber: { type: 'string', example: '01-01' },
-          cuisine: { type: 'string', example: 'Chicken rice' },
+          cuisine: { type: 'string', enum: CUISINE_VALUES, example: 'Chinese' },
+          speciality: { type: 'string', maxLength: SPECIALITY_MAX_LENGTH, example: 'Chicken rice', description: 'The dish the stall is known for' },
           isActive: { type: 'boolean' },
           addedBy: { type: 'string', description: 'Id of the user who added the stall' },
           liveReport: ref('LiveReport'),
@@ -301,7 +304,7 @@ export default {
       get: {
         tags: ['Hawker centres'],
         summary: "A centre's active stalls, each with its newest live report",
-        parameters: [id('id', 'Centre id'), query('search', 'Part of the stall name'), query('cuisine', 'Part of the cuisine')],
+        parameters: [id('id', 'Centre id'), query('search', 'Part of the stall name or dish'), query('cuisine', 'Exact cuisine category', { type: 'string', enum: CUISINE_VALUES, example: 'Chinese' })],
         responses: { 200: ok('Stalls', { type: 'array', items: ref('Stall') }), 404: error('Centre not found') }
       },
       post: {
@@ -310,7 +313,7 @@ export default {
         description: 'Unit numbers look like 01-23 (a leading # is fine). Names and unit numbers must be unique within the centre. Each IP can add 10 stalls per 15 minutes.',
         ...loginRequired,
         parameters: [id('id', 'Centre id')],
-        requestBody: { required: true, ...json({ type: 'object', required: ['name'], properties: { name: { type: 'string', minLength: 2, maxLength: 60 }, cuisine: { type: 'string', maxLength: 40 }, unitNumber: { type: 'string', example: '01-23' } } }, { name: 'Ah Hock Chicken Rice', cuisine: 'Chicken rice', unitNumber: '01-23' }) },
+        requestBody: { required: true, ...json({ type: 'object', required: ['name'], properties: { name: { type: 'string', minLength: 2, maxLength: 60 }, cuisine: { type: 'string', enum: CUISINE_VALUES }, speciality: { type: 'string', maxLength: SPECIALITY_MAX_LENGTH }, unitNumber: { type: 'string', example: '01-23' } } }, { name: 'Ah Hock Chicken Rice', cuisine: 'Chinese', speciality: 'Chicken rice', unitNumber: '01-23' }) },
         responses: {
           201: ok('Stall added', ref('Stall')),
           400: error('Name missing or too long, bad unit number, or an invalid id'),
@@ -318,6 +321,18 @@ export default {
           404: error('Centre not found'),
           409: error('A stall with that name or unit number already exists here'),
           429: error('Too many stalls added')
+        }
+      }
+    },
+    '/api/hawker-centres/{id}/reviews': {
+      get: {
+        tags: ['Reviews'],
+        summary: "The newest current reviews across a centre's stalls (at most 20)",
+        parameters: [id('id', 'Centre id')],
+        responses: {
+          200: ok('Reviews', { type: 'object', properties: { count: { type: 'integer', example: 3 }, reviews: { type: 'array', items: { allOf: [ref('Review'), { type: 'object', properties: { stall: { type: 'object', properties: { _id: { type: 'string' }, name: { type: 'string', example: 'Hock Lam Chicken Rice' } } } } }] } } } }),
+          400: error('Invalid id'),
+          404: error('Centre not found')
         }
       }
     },
@@ -361,7 +376,7 @@ export default {
       get: {
         tags: ['Stalls'],
         summary: 'Search stalls across all centres',
-        parameters: [query('search', 'Part of the stall name', { type: 'string', example: 'laksa' }), query('cuisine', 'Part of the cuisine')],
+        parameters: [query('search', 'Part of the stall name or dish', { type: 'string', example: 'laksa' }), query('cuisine', 'Exact cuisine category', { type: 'string', enum: CUISINE_VALUES, example: 'Chinese' })],
         responses: { 200: ok('Stalls, each with its centre name and address', { type: 'array', items: ref('Stall') }) }
       }
     },
@@ -370,10 +385,10 @@ export default {
       patch: {
         tags: ['Stalls'],
         summary: "Change a stall's details (the person who added it, or an admin)",
-        description: 'Send only the fields to change. An empty cuisine or unitNumber clears it.',
+        description: 'Send only the fields to change. An empty cuisine, speciality or unitNumber clears it. cuisine must be one of the categories (any capitals).',
         ...loginRequired,
         parameters: [id('id', 'Stall id')],
-        requestBody: { required: true, ...json({ type: 'object', properties: { name: { type: 'string', minLength: 2, maxLength: 60 }, cuisine: { type: 'string', maxLength: 40 }, unitNumber: { type: 'string', example: '01-23' } } }, { unitNumber: '01-24' }) },
+        requestBody: { required: true, ...json({ type: 'object', properties: { name: { type: 'string', minLength: 2, maxLength: 60 }, cuisine: { type: 'string', enum: CUISINE_VALUES }, speciality: { type: 'string', maxLength: SPECIALITY_MAX_LENGTH }, unitNumber: { type: 'string', example: '01-23' } } }, { cuisine: 'Chinese', speciality: 'Roast duck rice', unitNumber: '01-24' }) },
         responses: {
           200: ok('Stall updated', ref('Stall')),
           400: error('Bad name or unit number, or an invalid id'),

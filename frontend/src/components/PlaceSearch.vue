@@ -61,8 +61,8 @@ async function search() {
   <div class="place-search">
     <!-- A place is in use: show it, with a way to remove it -->
     <div v-if="props.place" class="d-flex flex-wrap align-items-center gap-2">
-      <span class="badge rounded-pill text-bg-light border fs-6 fw-normal">
-        <i class="bi bi-pin-map-fill text-danger me-1" aria-hidden="true"></i>{{ props.place.label }}
+      <span class="hw-tag fs-6">
+        <i class="bi bi-pin-map-fill me-1" aria-hidden="true"></i>{{ props.place.label }}
       </span>
       <button type="button" class="btn btn-link btn-sm p-0 text-secondary" v-on:click="emit('cleared')">
         <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Clear
@@ -82,13 +82,13 @@ async function search() {
         maxlength="60"
         autocomplete="postal-code"
       />
-      <button type="submit" class="btn btn-outline-danger" :disabled="searching">
+      <button type="submit" class="btn btn-outline-dark" :disabled="searching">
         <span v-if="searching" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
         <span :class="{ 'visually-hidden': searching }">Find</span>
       </button>
     </form>
 
-    <p v-if="errorMessage" class="small text-danger mt-2 mb-0" role="alert">{{ errorMessage }}</p>
+    <p v-if="errorMessage" class="small text-brick mt-2 mb-0" role="alert">{{ errorMessage }}</p>
 
     <!-- Several matches: let the user choose -->
     <div v-if="matches.length" class="mt-2">

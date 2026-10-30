@@ -102,36 +102,35 @@ onBeforeUnmount(() => clearInterval(timer))
 </script>
 
 <template>
-  <main class="container py-5">
+  <main class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
       <div>
-        <span class="eyebrow">Community</span>
-        <h1 class="display-6 fw-bold mt-1 mb-2">Community reports</h1>
+        <h1 class="display-6 mb-2">Community reports</h1>
         <p class="text-secondary mb-0">Live updates from diners in the last 60 minutes. Submitted by the community, not official.</p>
       </div>
-      <button v-if="!reporting" type="button" class="btn btn-danger" @click="startReport">
+      <button v-if="!reporting" type="button" class="btn hw-btn-primary" @click="startReport">
         <i class="bi bi-megaphone me-2" aria-hidden="true"></i>Report a stall
       </button>
     </div>
 
-    <p v-if="thanks" class="alert alert-success" role="status">{{ thanks }}</p>
+    <p v-if="thanks" class="hw-surface p-3 small" role="status">{{ thanks }}</p>
 
-    <section v-if="reporting" class="card border-0 shadow-sm mb-4" aria-labelledby="report-heading">
-      <div class="card-body p-4">
+    <section v-if="reporting" class="hw-surface mb-4" aria-labelledby="report-heading">
+      <div class="p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h2 id="report-heading" class="h5 mb-0">Report a stall</h2>
           <button type="button" class="btn btn-sm btn-link text-secondary" @click="closeReport">Cancel</button>
         </div>
         <div class="row g-3">
           <div class="col-md-6">
-            <label for="report-centre" class="form-label">Hawker centre</label>
+            <label for="report-centre" class="form-label hw-label">Hawker centre</label>
             <select id="report-centre" v-model="centreId" class="form-select">
               <option value="">Choose a centre</option>
               <option v-for="item in centres" :key="item._id" :value="item._id">{{ item.name }}</option>
             </select>
           </div>
           <div class="col-md-6">
-            <label for="report-stall" class="form-label">Stall</label>
+            <label for="report-stall" class="form-label hw-label">Stall</label>
             <select id="report-stall" v-model="stallId" class="form-select" :disabled="!centreId || !stalls.length">
               <option value="">{{ centreId && !stalls.length ? 'No stalls listed yet' : 'Choose a stall' }}</option>
               <option v-for="item in stalls" :key="item._id" :value="item._id">
@@ -140,15 +139,15 @@ onBeforeUnmount(() => clearInterval(timer))
             </select>
           </div>
         </div>
-        <p v-if="pickerError" class="small text-danger mt-2 mb-0" role="alert">{{ pickerError }}</p>
+        <p v-if="pickerError" class="small text-brick mt-2 mb-0" role="alert">{{ pickerError }}</p>
         <ReportStatusForm v-if="stall" :key="stall._id" :stall="stall" :centre="centre" @submitted="onReported" @cancel="closeReport" />
       </div>
     </section>
 
     <section aria-labelledby="feed-heading">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h2 id="feed-heading" class="h4 mb-0">Latest updates <span class="text-secondary fs-6">({{ reports.length }})</span></h2>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @click="loadReports">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom pb-2 mb-3">
+        <h2 id="feed-heading" class="h5 mb-0">Latest updates <span class="hw-mono text-secondary fw-normal">({{ reports.length }})</span></h2>
+        <button type="button" class="btn btn-sm btn-outline-dark" @click="loadReports">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh
         </button>
       </div>
@@ -156,23 +155,23 @@ onBeforeUnmount(() => clearInterval(timer))
 
       <LoadingState v-if="loading" message="Loading community reports..." />
       <ErrorState v-else-if="errorMessage" :message="errorMessage" retryable @retry="loadReports" />
-      <div v-else-if="!reports.length" class="alert alert-light border">
+      <div v-else-if="!reports.length" class="hw-surface p-3">
         No live {{ statusFilter ? STATUS_DISPLAY[statusFilter].label.toLowerCase() : '' }} reports right now.
         Be the first: choose <strong>Report a stall</strong>.
       </div>
-      <ul v-else class="list-group shadow-sm">
-        <li v-for="report in reports" :key="report.id" class="list-group-item d-flex flex-wrap align-items-center gap-3 py-3">
+      <ul v-else class="list-unstyled d-grid gap-3 mb-0">
+        <li v-for="report in reports" :key="report.id" class="hw-surface p-3 d-flex flex-wrap align-items-center gap-3">
           <StatusBadge :status="report.status" />
-          <div class="flex-grow-1">
+          <div class="flex-grow-1 min-w-0">
             <RouterLink
               class="fw-semibold text-reset text-decoration-none"
               :to="`/hawker-centres/${report.hawkerCentre._id}#stall-${report.stall._id}`"
             >
-              {{ report.stall.name }}<span v-if="report.stall.unitNumber" class="text-secondary fw-normal"> #{{ report.stall.unitNumber }}</span>
+              {{ report.stall.name }}<span v-if="report.stall.unitNumber" class="hw-mono text-secondary fw-normal small"> #{{ report.stall.unitNumber }}</span>
             </RouterLink>
             <div class="small text-secondary">{{ report.hawkerCentre.name }}</div>
           </div>
-          <div class="small text-secondary text-end">
+          <div class="small text-secondary text-end hw-mono">
             {{ timeAgo(report.createdAt, now) }}
             <div>expires {{ timeUntil(report.expiresAt, now) }}</div>
           </div>

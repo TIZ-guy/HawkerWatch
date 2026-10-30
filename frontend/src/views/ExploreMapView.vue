@@ -12,24 +12,34 @@ import FilterChips from '../components/FilterChips.vue'
 import PlaceSearch from '../components/PlaceSearch.vue'
 import { ONEMAP_ATTRIBUTION, ONEMAP_TILES, SINGAPORE_CENTRE } from '../utils/onemap.js'
 import { getHawkerCentres } from '../services/hawkerService.js'
-import { currentClosure, daysUntil, upcomingClosures } from '../utils/closures.js'
+import { currentClosure } from '../utils/closures.js'
+import { STATUS_ORDER, statusDisplay } from '../utils/status.js'
+import { cssColor } from '../utils/colors.js'
+import StatusBadge from '../components/StatusBadge.vue'
 import { DISTANCE_OPTIONS_KM, distanceKm, formatDistance, getCurrentPosition } from '../services/locationService.js'
 
 const SINGAPORE_BOUNDS = L.latLngBounds([1.144, 103.535], [1.494, 104.502])
-const UPCOMING_DAYS = 7
+// Marker colours come from the queue status tokens, so the map agrees with the list:
+// the newest live report's status, grey when NEA says the centre is closed today,
+// or a hollow marker when nobody has reported recently.
+const NO_REPORTS = { label: 'No live reports', fill: '#ffffff', stroke: 'var(--dim)' }
+const CLOSED_TODAY = { label: 'Closed today (NEA)', fill: 'var(--q-shut)', stroke: '#ffffff' }
 
-// Bootstrap's danger / warning / success colours, so markers match the closure badges
-const MARKER_STYLES = {
-  closed: { color: '#b02a37', fillColor: '#dc3545', label: 'Closed today' },
-  soon: { color: '#997404', fillColor: '#ffc107', label: `Closure in the next ${UPCOMING_DAYS} days` },
-  open: { color: '#146c43', fillColor: '#198754', label: 'No closure in the next week' }
+function markerState(centre) {
+  if (currentClosure(centre.closures)) return CLOSED_TODAY
+  if (centre.live) {
+    const display = statusDisplay(centre.live.latestStatus)
+    return { label: display.label, fill: display.dotColor, stroke: '#ffffff', status: centre.live.latestStatus }
+  }
+  return NO_REPORTS
 }
 
-function closureState(centre) {
-  if (currentClosure(centre.closures)) return 'closed'
-  const [next] = upcomingClosures(centre.closures)
-  return next && daysUntil(next.startDate) <= UPCOMING_DAYS ? 'soon' : 'open'
-}
+// Map legend: every status, then the two other kinds of marker
+const LEGEND = [
+  ...STATUS_ORDER.map((status) => ({ label: statusDisplay(status).label, fill: statusDisplay(status).dotColor, stroke: '#ffffff' })),
+  CLOSED_TODAY,
+  NO_REPORTS
+]
 
 const mapElement = ref(null)
 const centres = ref([])
@@ -78,8 +88,14 @@ const listHeading = computed(() => {
 })
 
 function markerStyle(centre, isSelected) {
-  const { color, fillColor } = MARKER_STYLES[closureState(centre)]
-  return { radius: isSelected ? 12 : 8, weight: isSelected ? 4 : 2, color, fillColor, fillOpacity: 0.9 }
+  const state = markerState(centre)
+  return {
+    radius: isSelected ? 11 : 7,
+    weight: isSelected ? 4 : 3,
+    color: cssColor(state.stroke),
+    fillColor: cssColor(state.fill),
+    fillOpacity: 1
+  }
 }
 
 function select(centre, { fly = true } = {}) {
@@ -137,7 +153,7 @@ function setOrigin(point, label) {
   }
   location.value = { lat: point.lat, lng: point.lng }
   userMarker?.remove()
-  userMarker = L.circleMarker(latLng, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#0d6efd', fillOpacity: 1 })
+  userMarker = L.circleMarker(latLng, { radius: 7, color: '#ffffff', weight: 3, fillColor: cssColor('var(--ink)'), fillOpacity: 1 })
     .bindTooltip(label)
     .addTo(map)
   if (!radiusKm.value) map.flyTo(latLng, 15)
@@ -190,7 +206,7 @@ function showDistance() {
   if (radiusKm.value && location.value) {
     radiusCircle = L.circle([location.value.lat, location.value.lng], {
       radius: radiusKm.value * 1000,
-      color: '#0d6efd',
+      color: cssColor('var(--ink)'),
       weight: 1,
       fillOpacity: 0.06,
       interactive: false
@@ -237,25 +253,25 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="container py-5">
-    <span class="eyebrow">Explore</span>
-    <h1 class="display-6 fw-bold mt-1 mb-2">Hawker centres on the map</h1>
+  <main class="container py-4">
+    <h1 class="display-6 mb-2">Map</h1>
     <p class="text-secondary mb-4">
-      Marker colours show official NEA closures. Select a marker or a centre in the list for details.
+      Markers show the newest community queue report at each centre; grey means NEA has it closed today.
+      Select a marker or a centre in the list for details.
     </p>
 
     <div class="row g-4">
       <div class="col-lg-8">
-        <div class="card border-0 shadow-sm overflow-hidden position-relative">
+        <div class="hw-surface overflow-hidden position-relative">
           <div ref="mapElement" class="map" role="region" aria-label="Map of hawker centres in Singapore"></div>
           <div v-if="loading" class="map-overlay d-flex align-items-center justify-content-center gap-2 text-secondary" role="status">
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Loading hawker centres...
           </div>
         </div>
         <ul class="list-inline small text-secondary mt-3 mb-0" aria-label="Map legend">
-          <li v-for="(style, key) in MARKER_STYLES" :key="key" class="list-inline-item me-4">
-            <span class="legend-dot" :style="{ background: style.fillColor, borderColor: style.color }" aria-hidden="true"></span>
-            {{ style.label }}
+          <li v-for="item in LEGEND" :key="item.label" class="list-inline-item me-3">
+            <span class="legend-dot" :style="{ background: item.fill, borderColor: item.stroke === '#ffffff' ? item.fill : item.stroke }" aria-hidden="true"></span>
+            {{ item.label }}
           </li>
           <li class="list-inline-item">
             <span class="legend-dot legend-you" aria-hidden="true"></span>You / searched place
@@ -263,66 +279,67 @@ onBeforeUnmount(() => {
         </ul>
       </div>
 
-      <aside class="col-lg-4 d-grid gap-3 align-content-start">
-        <div>
-          <p class="small fw-semibold text-secondary mb-2">Find centres near a postal code</p>
-          <PlaceSearch :place="searchedPlace" input-id="map-place-search" v-on:picked="usePlace" v-on:cleared="clearPlace" />
-        </div>
-
-        <div>
-          <p class="small fw-semibold text-secondary mb-2">Distance from {{ originName }}</p>
-          <FilterChips v-model="distanceChoice" :options="DISTANCE_CHOICES" :label="`Distance from ${originName}`" />
-        </div>
-
-        <div>
-          <button type="button" class="btn btn-outline-danger" :disabled="locating" @click="locate">
-            <span v-if="locating" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-            <i v-else class="bi bi-crosshair me-2" aria-hidden="true"></i>{{ location ? 'Update my location' : 'Show where I am' }}
-          </button>
-          <p v-if="locationError" class="small text-danger mt-2 mb-0" role="alert">{{ locationError }}</p>
-        </div>
-
-        <ErrorState v-if="errorMessage" :message="errorMessage" retryable @retry="loadCentres" />
-
-        <div v-if="selected" class="d-grid gap-2">
-          <HawkerCentreCard :centre="selected" :distance-km="distanceTo(selected)" />
-          <button type="button" class="btn btn-link btn-sm justify-self-start p-0 text-secondary" @click="clearSelection">
-            <i class="bi bi-x me-1" aria-hidden="true"></i>Clear selection
-          </button>
-        </div>
-
-        <section v-if="centres.length" class="card border-0 shadow-sm" aria-labelledby="map-list-heading">
-          <div class="card-body pb-2">
-            <h2 id="map-list-heading" class="h6 mb-0">
-              {{ listHeading }} <span class="text-secondary">({{ visibleCentres.length }})</span>
-            </h2>
+      <aside class="col-lg-4">
+        <div class="map-rail d-grid gap-3">
+          <div>
+            <p class="form-label hw-label">Near a postal code</p>
+            <PlaceSearch :place="searchedPlace" input-id="map-place-search" v-on:picked="usePlace" v-on:cleared="clearPlace" />
           </div>
-          <p v-if="!visibleCentres.length" class="small text-secondary px-3 mb-3">
-            No hawker centres within {{ radiusKm }} km of {{ originName }}. Try a bigger distance.
-          </p>
-          <div class="list-group list-group-flush centre-list">
-            <button
-              v-for="centre in listedCentres"
-              :key="centre._id"
-              type="button"
-              class="list-group-item list-group-item-action d-flex align-items-start gap-2"
-              :class="{ active: centre._id === selectedId }"
-              :aria-current="centre._id === selectedId"
-              @click="select(centre)"
-            >
-              <span
-                class="legend-dot mt-1 flex-shrink-0"
-                :style="{ background: MARKER_STYLES[closureState(centre)].fillColor, borderColor: MARKER_STYLES[closureState(centre)].color }"
-                aria-hidden="true"
-              ></span>
-              <span class="flex-grow-1 text-start">
-                <span class="d-block fw-semibold">{{ centre.name }}</span>
-                <span class="d-block small opacity-75">{{ centre.address }}</span>
-              </span>
-              <span v-if="distanceTo(centre) != null" class="small opacity-75 text-nowrap">{{ formatDistance(distanceTo(centre)) }}</span>
+
+          <div>
+            <p class="form-label hw-label">Distance from {{ originName }}</p>
+            <FilterChips v-model="distanceChoice" :options="DISTANCE_CHOICES" :label="`Distance from ${originName}`" />
+          </div>
+
+          <div>
+            <button type="button" class="btn btn-sm btn-outline-dark" :disabled="locating" @click="locate">
+              <span v-if="locating" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              <i v-else class="bi bi-crosshair me-2" aria-hidden="true"></i>{{ location ? 'Update my location' : 'Show where I am' }}
+            </button>
+            <p v-if="locationError" class="small text-brick mt-2 mb-0" role="alert">{{ locationError }}</p>
+          </div>
+
+          <ErrorState v-if="errorMessage" :message="errorMessage" retryable @retry="loadCentres" />
+
+          <div v-if="selected" class="d-grid gap-2">
+            <HawkerCentreCard :centre="selected" :distance-km="distanceTo(selected)" />
+            <button type="button" class="btn btn-link btn-sm justify-self-start p-0 text-secondary" @click="clearSelection">
+              <i class="bi bi-x me-1" aria-hidden="true"></i>Clear selection
             </button>
           </div>
-        </section>
+
+          <section v-if="centres.length" class="hw-surface overflow-hidden" aria-labelledby="map-list-heading">
+            <div class="px-3 pt-3 pb-2 border-bottom">
+              <h2 id="map-list-heading" class="h6 mb-0">
+                {{ listHeading }} <span class="hw-mono text-secondary fw-normal">({{ visibleCentres.length }})</span>
+              </h2>
+            </div>
+            <p v-if="!visibleCentres.length" class="small text-secondary p-3 mb-0">
+              No hawker centres within {{ radiusKm }} km of {{ originName }}. Try a bigger distance.
+            </p>
+            <div class="list-group list-group-flush centre-list">
+              <button
+                v-for="centre in listedCentres"
+                :key="centre._id"
+                type="button"
+                class="list-group-item list-group-item-action d-grid gap-1 text-start"
+                :class="{ active: centre._id === selectedId }"
+                :aria-current="centre._id === selectedId"
+                @click="select(centre)"
+              >
+                <span class="d-flex justify-content-between align-items-baseline gap-2">
+                  <span class="fw-semibold min-w-0">{{ centre.name }}</span>
+                  <span v-if="distanceTo(centre) != null" class="small hw-mono text-secondary text-nowrap">{{ formatDistance(distanceTo(centre)) }}</span>
+                </span>
+                <span class="small text-secondary">{{ centre.address }}</span>
+                <span class="small">
+                  <StatusBadge v-if="markerState(centre).status" :status="markerState(centre).status" />
+                  <span v-else class="text-secondary">{{ markerState(centre).label }}</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
       </aside>
     </div>
   </main>
@@ -352,9 +369,8 @@ onBeforeUnmount(() => {
 }
 
 .legend-you {
-  background: #0d6efd;
-  border-color: #ffffff;
-  box-shadow: 0 0 0 1px #0d6efd;
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
 .centre-list {
@@ -362,11 +378,23 @@ onBeforeUnmount(() => {
   overflow-y: auto;
 }
 
-.list-group-item.active .legend-dot {
-  border-color: #ffffff !important;
+/* The selected centre: a neutral fill instead of Bootstrap's blue */
+.centre-list .list-group-item.active {
+  background: var(--sub);
+  border-color: var(--line);
+  color: var(--ink);
+  border-left: 3px solid var(--ink);
 }
 
 .justify-self-start {
   justify-self: start;
+}
+
+/* The controls and list stay in view next to the map on wide screens */
+@media (min-width: 992px) {
+  .map-rail {
+    position: sticky;
+    top: 5rem;
+  }
 }
 </style>

@@ -9,7 +9,7 @@ import { checkStallDetails, exactly } from '../utils/stallUtils.js';
 
 // ============================================================
 // GET /api/stalls
-// Optional query: search, cuisine
+// Optional query: search (stall name or dish), cuisine (exact category, e.g. "Chinese")
 // Each stall has its star rating as rating: { average, count }.
 // ============================================================
 
@@ -18,10 +18,11 @@ export const getStalls = async (req, res, next) => {
         const filter = { isActive: true };
 
         if (req.query.search) {
-            filter.name = contains(req.query.search);
+            filter.$or = [{ name: contains(req.query.search) }, { speciality: contains(req.query.search) }];
         }
-        if (req.query.cuisine) {
-            filter.cuisine = contains(req.query.cuisine);
+        // Only plain text is used, so a query like cuisine[$ne]=x can't reach the database as an operator
+        if (typeof req.query.cuisine === 'string' && req.query.cuisine) {
+            filter.cuisine = req.query.cuisine;
         }
 
         const stalls = await Stall
@@ -107,7 +108,7 @@ export const getStallReports = async (req, res, next) => {
 // ============================================================
 // POST /api/hawker-centres/:id/stalls
 // Login required. Adds a stall to a centre (no official stall list exists, so users add them).
-// Body: { name, cuisine (optional), unitNumber (optional, e.g. "01-23") }
+// Body: { name, cuisine (optional category, e.g. "Chinese"), speciality (optional dish), unitNumber (optional, e.g. "01-23") }
 // ============================================================
 
 export const addStall = async (req, res, next) => {
@@ -146,7 +147,7 @@ export const addStall = async (req, res, next) => {
 // ============================================================
 // PATCH /api/stalls/:id
 // Login required. The person who added the stall, or an admin, can change its details.
-// Body: any of { name, cuisine, unitNumber }; send "" to clear cuisine or unitNumber.
+// Body: any of { name, cuisine, speciality, unitNumber }; send "" to clear cuisine, speciality or unitNumber.
 // ============================================================
 
 export const updateStall = async (req, res, next) => {
@@ -178,7 +179,7 @@ export const updateStall = async (req, res, next) => {
         }
 
         // Only the fields that were sent are changed; undefined clears an optional field
-        for (const field of ['name', 'cuisine', 'unitNumber']) {
+        for (const field of ['name', 'cuisine', 'speciality', 'unitNumber']) {
             if (field in details) {
                 stall[field] = details[field];
             }

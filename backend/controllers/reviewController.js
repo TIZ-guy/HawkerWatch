@@ -1,4 +1,5 @@
 import Review from '../models/Review.js';
+import HawkerCentre from '../models/HawkerCentre.js';
 import ReviewPhoto from '../models/ReviewPhoto.js';
 import Stall from '../models/Stall.js';
 import { REVIEW_TEXT_MAX_LENGTH, MAX_REVIEW_PHOTOS } from '../utils/constants.js';
@@ -53,6 +54,51 @@ function toPublicReview(review, user) {
 function isAuthor(review, user) {
     return String(review.user) === String(user._id);
 }
+
+
+// ============================================================
+// GET /api/hawker-centres/:id/reviews
+// The newest current reviews across all of a centre's stalls (at most 20), each with its stall's
+// name. Used by the centre page's Reviews tab and photo strip. { count, reviews }
+// ============================================================
+
+const CENTRE_REVIEWS_LIMIT = 20;
+
+export const getCentreReviews = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+
+        if (!await HawkerCentre.exists({ _id: id })) {
+            res.status(404).json({ success: false, message: 'Hawker centre not found.' });
+            return;
+        }
+
+        const stalls = await Stall.find({ hawkerCentre: id, isActive: true }).select('name').lean();
+        const stallNames = {};
+        for (const stall of stalls) {
+            stallNames[String(stall._id)] = stall.name;
+        }
+
+        const reviews = await Review
+            .find({ stall: { $in: stalls.map(stall => stall._id) }, ...currentReviewFilter() })
+            .populate('user', 'name')
+            .sort({ createdAt: -1 })
+            .limit(CENTRE_REVIEWS_LIMIT)
+            .lean();
+
+        const publicReviews = [];
+        for (const review of reviews) {
+            publicReviews.push({
+                ...toPublicReview(review, review.user),
+                stall: { _id: review.stall, name: stallNames[String(review.stall)] }
+            });
+        }
+
+        res.status(200).json({ success: true, data: { count: publicReviews.length, reviews: publicReviews } });
+    } catch (error) {
+        next(error);
+    }
+};
 
 
 // ============================================================
