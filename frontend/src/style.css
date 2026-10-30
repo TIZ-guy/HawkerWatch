@@ -128,8 +128,10 @@ label.hw-chip { cursor: pointer; }
 
 /* Photo frames. Fixed heights so rows stay aligned when a photoUrl is missing. */
 .hw-photo { background: var(--sub); object-fit: cover; display: block; width: 100%; }
-.hw-photo-thumb { height: 84px; border-radius: var(--radius-sm); }
-.hw-photo-banner { height: clamp(150px, 26vw, 232px); border-radius: var(--radius); }
+/* 4:3, the shape of most NEA photos */
+.hw-photo-thumb { height: 108px; border-radius: var(--radius-sm); }
+@media (max-width: 460px) { .hw-photo-thumb { height: 72px; } }
+.hw-photo-banner { height: clamp(220px, 34vw, 380px); border-radius: var(--radius); }
 .hw-photo-tile { width: 92px; height: 70px; border-radius: var(--radius-sm); }
 
 /* Placeholder shown when a centre has no photoUrl */

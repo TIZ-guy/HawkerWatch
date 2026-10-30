@@ -72,8 +72,8 @@ const live = computed(() => props.centre.live || null)
 </template>
 
 <style scoped>
-.centre-row { grid-template-columns: 112px 1fr; }
-@media (max-width: 460px) { .centre-row { grid-template-columns: 84px 1fr; } }
+.centre-row { grid-template-columns: 144px 1fr; }
+@media (max-width: 460px) { .centre-row { grid-template-columns: 96px 1fr; } }
 
 /* The parent's extra content spans the whole row */
 .slot-area { grid-column: 1 / -1; }
