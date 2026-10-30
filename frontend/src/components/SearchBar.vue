@@ -16,7 +16,7 @@ const emit = defineEmits(['submit'])
 <template>
   <div>
     <label :for="id" class="form-label hw-label">{{ label }}</label>
-    <div class="input-group">
+    <form class="input-group" role="search" @submit.prevent="emit('submit', search)">
       <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
       <input :id="id" v-model.trim="search" type="search" class="form-control" :placeholder="placeholder" autocomplete="off" />
       <button v-if="search" type="button" class="btn btn-outline-secondary" aria-label="Clear search" @click="search = ''">

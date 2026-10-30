@@ -109,10 +109,10 @@ async function loadResults() {
     ])
 
     const cuisineCentreIds = cuisineStalls && new Set(cuisineStalls.map((stall) => stall.hawkerCentre?._id))
-    // liveStallCount comes with each centre in the list, so "Has live updates" needs no extra requests
+    // live ({ stallsReported, ... } or null) comes with each centre in the list, so "Has live updates" needs no extra requests
     const allowed = pool.filter((centre) =>
       (!openOnly.value || !currentClosure(centre.closures)) &&
-      (!liveOnly.value || centre.liveStallCount > 0) &&
+      (!liveOnly.value || centre.live?.stallsReported > 0) &&
       (!cuisineCentreIds || cuisineCentreIds.has(centre._id))
     )
 

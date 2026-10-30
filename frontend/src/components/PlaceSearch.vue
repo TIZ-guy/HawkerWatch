@@ -61,6 +61,11 @@ async function search() {
 
 <template>
   <div class="place-search">
+    <!-- Kept outside the input group: Bootstrap only rounds the first box in a group, and a hidden label there would square off the left side -->
+    <label :for="props.place ? null : inputId" :class="props.label ? 'form-label hw-label' : 'visually-hidden'">
+      {{ props.label || 'Postal code or place' }}
+    </label>
+
     <!-- A place is in use: show it, with a way to remove it -->
     <div v-if="props.place" class="d-flex flex-wrap align-items-center gap-2">
       <span class="hw-tag fs-6">
@@ -73,7 +78,7 @@ async function search() {
 
     <!-- Otherwise: the search box -->
     <form v-else class="input-group" role="search" v-on:submit.prevent="search">
-      <span class="input-group-text bg-white"><i class="bi bi-pin-map" aria-hidden="true"></i></span>
+      <span class="input-group-text"><i class="bi bi-pin-map" aria-hidden="true"></i></span>
       <input
         :id="inputId"
         v-model="text"
