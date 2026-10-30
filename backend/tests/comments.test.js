@@ -2,7 +2,7 @@
 // so these tests run without MongoDB (the same way CI runs them).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import app from '../app.js';
+import { startServer } from './startServer.js';
 import Comment from '../models/Comment.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import User from '../models/User.js';
@@ -26,14 +26,6 @@ function fakeQuery(result) {
         lean() { return this; },
         then(resolve, reject) { return Promise.resolve(result).then(resolve, reject); }
     };
-}
-
-// Starts the real app on a free port.
-async function startServer(t) {
-    const server = app.listen(0);
-    t.after(() => server.close());
-    await new Promise((resolve) => server.once('listening', resolve));
-    return `http://127.0.0.1:${server.address().port}`;
 }
 
 // Logs `user` in: protect() looks the user up again, so User.findById returns them.

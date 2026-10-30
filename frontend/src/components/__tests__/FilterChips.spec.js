@@ -27,14 +27,17 @@ describe('FilterChips', () => {
     expect(wrapper.find('i').classes()).toContain('bi-egg-fried')
   })
 
-  it('marks the selected chips for screen readers and in colour', () => {
+  // The selected look comes from the hw-chip CSS keying off aria-pressed, so aria-pressed is what matters
+  it('marks the selected chips for screen readers, which also drives their selected style', () => {
     const wrapper = mount(FilterChips, { props: { options: OPTIONS, multiple: true, modelValue: ['malay'] } })
 
     const [chinese, malay] = wrapper.findAll('button')
     expect(malay.attributes('aria-pressed')).toBe('true')
-    expect(malay.classes()).toContain('btn-danger')
     expect(chinese.attributes('aria-pressed')).toBe('false')
-    expect(chinese.classes()).toContain('btn-outline-secondary')
+    for (const chip of [chinese, malay]) {
+      expect(chip.classes()).toContain('hw-chip')
+      expect(chip.classes().some((name) => name.startsWith('btn'))).toBe(false)
+    }
   })
 
   describe('multiple: true', () => {

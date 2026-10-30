@@ -1,11 +1,16 @@
 <script setup>
-// Centre detail page: official closures, community summary, the centre's stalls and comments.
-// A link ending in #stall-<id> (from the home page stall results) scrolls to that stall.
+// Centre detail page: banner photo, four figures, official closures, then tabs for the stalls (a table),
+// recent reviews and comments, with a side rail holding the map, a report form and the reminder settings.
+// A link ending in #stall-<id> (e.g. back from a stall page) scrolls to that stall;
+// #reviews or #comments opens that tab.
 import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OfficialClosureAlert from '../components/OfficialClosureAlert.vue'
-import CommunityUpdateCard from '../components/CommunityUpdateCard.vue'
-import StallCard from '../components/StallCard.vue'
+import CentrePhoto from '../components/CentrePhoto.vue'
+import StallTable from '../components/StallTable.vue'
+import StarRating from '../components/StarRating.vue'
+import ReportStatusForm from '../components/ReportStatusForm.vue'
+import FavouriteAlertEditor from '../components/FavouriteAlertEditor.vue'
 import SearchBar from '../components/SearchBar.vue'
 import FilterChips from '../components/FilterChips.vue'
 import LoadingState from '../components/LoadingState.vue'
@@ -14,6 +19,10 @@ import FavouriteButton from '../components/FavouriteButton.vue'
 import CommentSection from '../components/CommentSection.vue'
 import StallForm from '../components/StallForm.vue'
 import { useAuthStore } from '../stores/useAuthStore.js'
+import { useFavouriteStore } from '../stores/useFavouriteStore.js'
+import { getCentreReviews, photoUrl } from '../services/reviewService.js'
+import { timeAgo } from '../utils/time.js'
+import { cuisineOptions as allCuisineOptions } from '../utils/cuisines.js'
 
 // The map library is big, so it is only downloaded when a centre page with a map is opened
 const CentreMap = defineAsyncComponent(() => import('../components/CentreMap.vue'))
@@ -22,6 +31,9 @@ import { getCommunitySummary, getHawkerCentre, getHawkerCentreStalls } from '../
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const favourites = useFavouriteStore()
+
+const MAX_PHOTO_TILES = 8
 
 const centre = ref(null)
 const stalls = ref([])
@@ -36,26 +48,72 @@ const stallSearch = ref('')
 const cuisine = ref('')
 const highlightedStallId = ref('')
 
+// Stalls / Reviews / Comments tabs
+const TABS = [
+  { value: 'stalls', label: 'Stalls' },
+  { value: 'reviews', label: 'Reviews' },
+  { value: 'comments', label: 'Comments' }
+]
+const activeTab = ref('stalls')
+
+// Recent reviews across the centre's stalls (Reviews tab and the photo strip)
+const centreReviews = ref([])
+const reviewsLoading = ref(false)
+const reviewsError = ref('')
+
+// Rail: report a stall's queue
+const reportStallId = ref('')
+const reportThanks = ref('')
+
 // "Add a stall" form (no official stall list exists, so diners add them)
 const addingStall = ref(false)
 const addedMessage = ref('')
 
-const cuisineOptions = computed(() =>
-  [...new Set(stalls.value.map((stall) => stall.cuisine).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b))
-    .map((name) => ({ value: name, label: name }))
-)
+// Only the cuisines this centre actually has, in the fixed order of the full list
+const cuisineOptions = computed(() => {
+  const present = new Set(stalls.value.map((stall) => stall.cuisine).filter(Boolean))
+  return allCuisineOptions.filter((option) => present.has(option.value))
+})
 
 // The stall list is small, so filtering happens here instead of with another request.
 const visibleStalls = computed(() => {
   const term = stallSearch.value.toLowerCase()
   return stalls.value.filter((stall) =>
     (!cuisine.value || stall.cuisine === cuisine.value) &&
-    (!term || [stall.name, stall.cuisine, stall.unitNumber].some((text) => text?.toLowerCase().includes(term)))
+    (!term || [stall.name, stall.cuisine, stall.speciality, stall.unitNumber].some((text) => text?.toLowerCase().includes(term)))
   )
 })
 
 const liveStallCount = computed(() => stalls.value.filter((stall) => stall.liveReport).length)
+
+// Average star rating over every stall's reviews, weighted by how many reviews each has
+const centreRating = computed(() => {
+  let total = 0
+  let count = 0
+  for (const stall of stalls.value) {
+    if (stall.rating && stall.rating.count > 0) {
+      total += stall.rating.average * stall.rating.count
+      count += stall.rating.count
+    }
+  }
+  return count ? { average: Math.round((total / count) * 10) / 10, count } : null
+})
+
+// The newest review photos, each linking to its stall's reviews
+const photoTiles = computed(() => {
+  const tiles = []
+  for (const review of centreReviews.value) {
+    for (const photoId of review.photos) {
+      if (tiles.length < MAX_PHOTO_TILES) tiles.push({ photoId, stallId: review.stall._id, stallName: review.stall.name })
+    }
+  }
+  return tiles
+})
+
+const reportStall = computed(() => stalls.value.find((stall) => stall._id === reportStallId.value) || null)
+
+// This centre's favourite, if the user has saved it (for the reminder panel)
+const centreFavourite = computed(() => (centre.value ? favourites.find('HawkerCentre', centre.value._id) : null))
 
 const directionsUrl = computed(() => {
   const coordinates = centre.value?.location?.coordinates
@@ -88,15 +146,28 @@ function onStallReported(stallId, report) {
   loadSummary(route.params.id, { keepCurrent: true })
 }
 
-// After a flag hides a report, reload every stall's latest update and the summary, without a loading screen.
-async function refreshStatuses() {
-  const id = route.params.id
-  loadSummary(id, { keepCurrent: true })
+// The rail's report form finished: show the update in the table and thank the user
+function onRailReported(report) {
+  const stall = reportStall.value
+  onStallReported(stall._id, report)
+  reportThanks.value = `Thanks! Your update for ${stall.name} is live for the next 60 minutes.`
+  reportStallId.value = ''
+}
+
+function goToLogin(hash) {
+  router.push({ path: '/login', query: { redirect: `${route.path}${hash}` } })
+}
+
+async function loadCentreReviews(id) {
+  reviewsLoading.value = true
+  reviewsError.value = ''
   try {
-    const fresh = await getHawkerCentreStalls(id)
-    if (id === route.params.id) stalls.value = fresh
-  } catch {
-    // Keep showing the current list; the next page load will catch up.
+    const data = await getCentreReviews(id)
+    if (id === route.params.id) centreReviews.value = data.reviews
+  } catch (error) {
+    if (id === route.params.id) reviewsError.value = error.message
+  } finally {
+    if (id === route.params.id) reviewsLoading.value = false
   }
 }
 
@@ -119,7 +190,13 @@ async function load(id) {
   stalls.value = []
   stallSearch.value = ''
   cuisine.value = ''
+  centreReviews.value = []
+  reportStallId.value = ''
+  reportThanks.value = ''
+  activeTab.value = route.hash === '#reviews' ? 'reviews' : route.hash === '#comments' ? 'comments' : 'stalls'
   loadSummary(id) // shown separately, so it doesn't hold up the rest of the page
+  loadCentreReviews(id)
+  if (auth.user) favourites.load() // for the reminder panel
 
   try {
     const [centreData, stallData] = await Promise.all([getHawkerCentre(id), getHawkerCentreStalls(id)])
@@ -152,131 +229,218 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
 </script>
 
 <template>
-  <main class="container py-5">
-    <RouterLink to="/" class="text-decoration-none small">
-      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All hawker centres
-    </RouterLink>
+  <main class="container py-4">
+    <nav aria-label="Breadcrumb" class="small text-secondary mb-3">
+      <RouterLink to="/" class="text-reset">Discover</RouterLink>
+      <span v-if="centre" aria-hidden="true"> › </span>
+      <span v-if="centre" aria-current="page">{{ centre.name }}</span>
+    </nav>
 
-    <LoadingState v-if="loading" class="mt-3" message="Loading hawker centre..." />
+    <LoadingState v-if="loading" message="Loading hawker centre..." />
 
     <template v-else-if="errorMessage">
-      <ErrorState class="mt-3" :message="errorMessage" :retryable="!notFound" @retry="load(route.params.id)" />
+      <ErrorState :message="errorMessage" :retryable="!notFound" @retry="load(route.params.id)" />
     </template>
 
     <template v-else-if="centre">
-      <header class="row g-4 align-items-center mt-1 mb-4">
-        <div :class="centre.photoUrl ? 'col-lg-7' : 'col-12'">
-          <span class="eyebrow">Hawker centre</span>
-          <h1 class="display-6 fw-bold mt-1 mb-2">{{ centre.name }}</h1>
-          <p class="text-secondary mb-2">
-            <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ centre.address
-            }}<span v-if="centre.postalCode">, Singapore {{ centre.postalCode }}</span>
-          </p>
-          <!-- stalls.length changes straight away when someone adds a stall on this page -->
-          <p class="text-secondary mb-2">
-            <i class="bi bi-shop me-1" aria-hidden="true"></i>
-            <a href="#stalls" class="text-reset">{{ stalls.length }} stall{{ stalls.length === 1 ? '' : 's' }} listed on HawkerWatch</a>
-            <span v-if="centre.foodStallCount"> · {{ centre.foodStallCount }} cooked food stalls in total (NEA)</span>
-          </p>
-          <p v-if="centre.description" class="mb-3">{{ centre.description }}</p>
-          <div class="d-flex flex-wrap gap-2">
-            <FavouriteButton target-type="HawkerCentre" :target-id="centre._id" :name="centre.name" with-label />
-            <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-danger">
+      <CentrePhoto :centre="centre" size="banner" />
+
+      <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-3 mb-3">
+        <div class="min-w-0">
+          <h1 class="display-6 mb-2">{{ centre.name }}</h1>
+          <div class="d-flex flex-wrap gap-3 small text-secondary">
+            <span>{{ centre.address }}<span v-if="centre.postalCode">, Singapore {{ centre.postalCode }}</span></span>
+            <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="text-reset">
               <i class="bi bi-sign-turn-right me-1" aria-hidden="true"></i>Directions
             </a>
           </div>
+          <p v-if="centre.description" class="small text-secondary mt-2 mb-0">{{ centre.description }}</p>
         </div>
-        <div v-if="centre.photoUrl" class="col-lg-5">
-          <img :src="centre.photoUrl" :alt="`Photo of ${centre.name}`" class="centre-photo rounded shadow-sm" />
-          <p class="small text-secondary mt-1 mb-0">Photo: NEA</p>
-        </div>
+        <FavouriteButton target-type="HawkerCentre" :target-id="centre._id" :name="centre.name" with-label />
       </header>
 
-      <div class="row g-4">
-        <div class="col-lg-6">
-          <OfficialClosureAlert :closures="centre.closures" />
+      <!-- Figures -->
+      <dl class="hw-surface d-flex flex-wrap m-0 overflow-hidden hw-stats">
+        <div class="p-3 flex-fill min-w-0">
+          <dt class="small text-uppercase text-secondary">Stalls</dt>
+          <dd class="h5 hw-mono mb-0">{{ centre.foodStallCount ?? '–' }}</dd>
         </div>
-        <div class="col-lg-6">
-          <CommunityUpdateCard :summary="summary" :error="summaryError" />
+        <div class="p-3 flex-fill min-w-0">
+          <dt class="small text-uppercase text-secondary">Listed here</dt>
+          <!-- stalls.length changes straight away when someone adds a stall on this page -->
+          <dd class="h5 hw-mono mb-0">{{ stalls.length }}</dd>
         </div>
+        <div class="p-3 flex-fill min-w-0">
+          <dt class="small text-uppercase text-secondary">Live reports</dt>
+          <dd class="h5 hw-mono mb-0">{{ summary ? summary.stallsReported : liveStallCount }}</dd>
+        </div>
+        <div class="p-3 flex-fill min-w-0">
+          <dt class="small text-uppercase text-secondary">Rating</dt>
+          <dd class="h5 hw-mono mb-0">
+            <template v-if="centreRating">{{ centreRating.average.toFixed(1) }} <span class="small text-secondary fw-normal">({{ centreRating.count }})</span></template>
+            <template v-else>–</template>
+          </dd>
+        </div>
+      </dl>
+
+      <OfficialClosureAlert class="mt-3" :closures="centre.closures" />
+
+      <div class="row g-4 mt-1">
+        <!-- Main column: tabs -->
+        <div class="col-lg-8 min-w-0">
+          <ul class="nav nav-underline mb-3" role="tablist">
+            <li v-for="tab in TABS" :key="tab.value" class="nav-item" role="presentation">
+              <button
+                type="button"
+                class="nav-link"
+                :class="{ active: activeTab === tab.value }"
+                role="tab"
+                :aria-selected="activeTab === tab.value"
+                v-on:click="activeTab = tab.value"
+              >
+                {{ tab.label }}
+                <span v-if="tab.value === 'stalls'" class="hw-mono small text-secondary">{{ stalls.length }}</span>
+              </button>
+            </li>
+          </ul>
+
+          <!-- Stalls -->
+          <section v-show="activeTab === 'stalls'" id="stalls" aria-label="Stalls">
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+              <span class="small text-secondary">
+                <span class="hw-mono">{{ liveStallCount }}</span> with a live community update
+              </span>
+              <button v-if="!addingStall" type="button" class="btn btn-sm btn-outline-dark" v-on:click="startAddingStall">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add a stall
+              </button>
+            </div>
+
+            <StallForm v-if="addingStall" class="mb-3" :centre-id="centre._id" v-on:saved="onStallAdded" v-on:cancel="addingStall = false" />
+            <p v-if="addedMessage" class="small text-secondary" role="status">{{ addedMessage }}</p>
+
+            <template v-if="stalls.length">
+              <div class="d-grid gap-2 mb-3">
+                <SearchBar v-model="stallSearch" id="stall-search" label="Search this centre" placeholder="Stall name, dish or unit" />
+                <FilterChips v-if="cuisineOptions.length > 1" v-model="cuisine" :options="cuisineOptions" label="Cuisine" small />
+              </div>
+
+              <StallTable v-if="visibleStalls.length" :stalls="visibleStalls" :highlighted-id="highlightedStallId" />
+              <div v-else class="hw-surface p-3">No stalls match your search.</div>
+            </template>
+
+            <div v-else-if="!addingStall" class="hw-surface p-3">
+              No stalls have been added for this centre yet. Know a stall here?
+              <button type="button" class="btn btn-link p-0 align-baseline" v-on:click="startAddingStall">Add it</button>
+              so others can see its queue and reviews.
+            </div>
+          </section>
+
+          <!-- Reviews: the newest across every stall here; writing one happens on the stall's page -->
+          <section v-show="activeTab === 'reviews'" aria-label="Recent reviews">
+            <LoadingState v-if="reviewsLoading" message="Loading reviews..." />
+            <ErrorState v-else-if="reviewsError" :message="reviewsError" retryable @retry="loadCentreReviews(centre._id)" />
+            <div v-else-if="centreReviews.length" class="d-grid gap-2">
+              <article v-for="review in centreReviews" :key="review._id" class="hw-surface p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2">
+                  <RouterLink :to="`/stalls/${review.stall._id}#reviews`" class="fw-semibold text-reset">{{ review.stall.name }}</RouterLink>
+                  <span class="small text-secondary">
+                    {{ review.user ? review.user.name : 'Deleted user' }} · <span class="hw-mono">{{ timeAgo(review.createdAt) }}</span>
+                  </span>
+                </div>
+                <StarRating :rating="review.rating" :show-number="false" />
+                <p v-if="review.text" class="small mt-1 mb-0">{{ review.text }}</p>
+              </article>
+            </div>
+            <div v-else class="hw-surface p-3 small text-secondary">
+              No reviews yet. Open a stall to rate it.
+            </div>
+          </section>
+
+          <!-- Comments about the centre -->
+          <CommentSection v-if="activeTab === 'comments'" :centre-id="centre._id" />
+
+          <!-- The newest review photos -->
+          <section v-if="photoTiles.length" class="mt-4" aria-labelledby="photos-heading">
+            <h2 id="photos-heading" class="hw-label mb-2">Recent photos</h2>
+            <div class="d-flex flex-wrap gap-2">
+              <RouterLink
+                v-for="tile in photoTiles"
+                :key="tile.photoId"
+                :to="`/stalls/${tile.stallId}#reviews`"
+                :title="`Photo from a review of ${tile.stallName}`"
+              >
+                <img :src="photoUrl(tile.photoId)" :alt="`Photo from a review of ${tile.stallName}`" class="hw-photo hw-photo-tile" loading="lazy" />
+              </RouterLink>
+            </div>
+          </section>
+        </div>
+
+        <!-- Rail: map, report a queue, reminder -->
+        <aside class="col-lg-4">
+          <div class="rail d-grid gap-3">
+            <section v-if="centre.location?.coordinates" class="hw-surface overflow-hidden" aria-label="Map">
+              <CentreMap :key="centre._id" :centre="centre" />
+            </section>
+
+            <section class="hw-surface p-3" aria-labelledby="report-heading">
+              <h2 id="report-heading" class="h6">Report a queue</h2>
+              <template v-if="!auth.user">
+                <p class="small text-secondary mb-2">Tell others how long the queue is right now.</p>
+                <button type="button" class="btn btn-sm btn-outline-dark" v-on:click="goToLogin('#stalls')">Log in to report</button>
+              </template>
+              <template v-else-if="stalls.length">
+                <label for="report-stall" class="form-label small text-secondary">Which stall?</label>
+                <select id="report-stall" v-model="reportStallId" class="form-select form-select-sm">
+                  <option value="">Choose a stall</option>
+                  <option v-for="stall in stalls" :key="stall._id" :value="stall._id">
+                    {{ stall.name }}{{ stall.unitNumber ? ` (#${stall.unitNumber})` : '' }}
+                  </option>
+                </select>
+                <ReportStatusForm
+                  v-if="reportStall"
+                  :key="reportStall._id"
+                  :stall="reportStall"
+                  :centre="centre"
+                  v-on:submitted="onRailReported"
+                  v-on:cancel="reportStallId = ''"
+                />
+                <p v-if="reportThanks" class="small text-secondary mt-2 mb-0" role="status">{{ reportThanks }}</p>
+              </template>
+              <p v-else class="small text-secondary mb-0">Add a stall first to report its queue.</p>
+            </section>
+
+            <section class="hw-surface p-3" aria-labelledby="reminder-heading">
+              <h2 id="reminder-heading" class="h6">Reminder</h2>
+              <FavouriteAlertEditor v-if="centreFavourite" :favourite="centreFavourite" />
+              <template v-else>
+                <p class="small text-secondary mb-2">Save this centre to set a reminder for the days you usually go.</p>
+                <FavouriteButton target-type="HawkerCentre" :target-id="centre._id" :name="centre.name" with-label />
+              </template>
+            </section>
+          </div>
+        </aside>
       </div>
-
-      <section v-if="centre.location?.coordinates" class="mt-5" aria-labelledby="location-heading">
-        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
-          <h2 id="location-heading" class="h3 mb-0">Location</h2>
-          <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="small text-danger">
-            <i class="bi bi-sign-turn-right me-1" aria-hidden="true"></i>Get directions
-          </a>
-        </div>
-        <div class="card border-0 shadow-sm overflow-hidden">
-          <CentreMap :key="centre._id" :centre="centre" />
-        </div>
-      </section>
-
-      <section id="stalls" class="mt-5" aria-labelledby="stalls-heading">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <div>
-            <h2 id="stalls-heading" class="h3 mb-0">
-              Stalls <span class="text-secondary fs-5">({{ stalls.length }})</span>
-            </h2>
-            <span v-if="stalls.length" class="text-secondary small">
-              {{ liveStallCount }} with a live community update
-            </span>
-          </div>
-          <button v-if="!addingStall" type="button" class="btn btn-sm btn-outline-danger" v-on:click="startAddingStall">
-            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add a stall
-          </button>
-        </div>
-
-        <StallForm v-if="addingStall" class="mb-4" :centre-id="centre._id" v-on:saved="onStallAdded" v-on:cancel="addingStall = false" />
-        <p v-if="addedMessage" class="small text-success" role="status">{{ addedMessage }}</p>
-
-        <template v-if="stalls.length">
-          <div class="row g-3 mb-4">
-            <div class="col-md-6">
-              <SearchBar v-model="stallSearch" id="stall-search" label="Search this centre" placeholder="Stall name, cuisine or unit" />
-            </div>
-            <div v-if="cuisineOptions.length > 1" class="col-md-6 d-flex flex-column justify-content-end">
-              <FilterChips v-model="cuisine" :options="cuisineOptions" label="Food options" small />
-            </div>
-          </div>
-
-          <div v-if="visibleStalls.length" class="row g-3">
-            <div
-              v-for="stall in visibleStalls"
-              :id="`stall-${stall._id}`"
-              :key="stall._id"
-              class="col-md-6 col-xl-4"
-              :class="{ 'stall-highlight': stall._id === highlightedStallId }"
-            >
-              <StallCard :stall="stall" :centre="centre" @reported="(report) => onStallReported(stall._id, report)" @changed="refreshStatuses" />
-            </div>
-          </div>
-          <div v-else class="alert alert-light border">No stalls match your search.</div>
-        </template>
-
-        <div v-else-if="!addingStall" class="alert alert-light border mb-0">
-          No stalls have been added for this centre yet. Know a stall here?
-          <button type="button" class="btn btn-link p-0 align-baseline" v-on:click="startAddingStall">Add it</button>
-          so others can see its queue and reviews.
-        </div>
-      </section>
-
-      <CommentSection class="mt-5" :centre-id="centre._id" />
     </template>
   </main>
 </template>
 
 <style scoped>
-.centre-photo {
-  display: block;
-  width: 100%;
-  max-height: 280px;
-  object-fit: cover;
+.hw-stats > div + div { border-left: 1px solid var(--line); }
+
+.nav-underline .nav-link {
+  color: var(--dim);
 }
 
-.stall-highlight :deep(.card) {
-  outline: 3px solid var(--hw-orange);
-  outline-offset: 2px;
+.nav-underline .nav-link.active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The rail stays in view while the stall table scrolls, on wide screens */
+@media (min-width: 992px) {
+  .rail {
+    position: sticky;
+    top: 5rem;
+  }
 }
 </style>

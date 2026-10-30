@@ -42,18 +42,18 @@ async function onClick() {
   <span class="favourite-button d-inline-flex align-items-center gap-2">
     <button
       type="button"
-      class="btn btn-sm"
-      :class="[saved ? 'btn-danger' : 'btn-outline-danger', withLabel ? '' : 'rounded-circle icon-only']"
+      class="btn btn-sm fav-btn"
+      :class="withLabel ? '' : 'rounded-circle icon-only'"
       :aria-pressed="saved"
       :aria-label="label"
       :title="label"
       :disabled="busy"
       @click.stop.prevent="onClick"
     >
-      <i class="bi" :class="saved ? 'bi-heart-fill' : 'bi-heart'" aria-hidden="true"></i>
+      <i class="bi" :class="saved ? 'bi-heart-fill text-brick' : 'bi-heart'" aria-hidden="true"></i>
       <span v-if="withLabel" class="ms-1">{{ saved ? 'Saved' : 'Save' }}</span>
     </button>
-    <span v-if="errorMessage" class="small text-danger" role="alert">{{ errorMessage }}</span>
+    <span v-if="errorMessage" class="small text-brick" role="alert">{{ errorMessage }}</span>
   </span>
 </template>
 
@@ -62,6 +62,20 @@ async function onClick() {
 .favourite-button {
   position: relative;
   z-index: 2;
+}
+
+/* Neutral outline; when saved, only the heart is coloured */
+.fav-btn {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.fav-btn:hover,
+.fav-btn:focus-visible {
+  background: var(--sub);
+  border-color: var(--dim);
+  color: var(--ink);
 }
 
 .icon-only {

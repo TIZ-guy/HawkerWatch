@@ -96,14 +96,13 @@ onMounted(async () => {
 
 <template>
   <main class="container py-5">
-    <span class="eyebrow">Account</span>
-    <h1 class="display-6 fw-bold mt-1 mb-4">Your profile</h1>
+    <h1 class="display-6 mb-4">Your profile</h1>
 
     <div class="row g-4 align-items-start">
       <div class="col-lg-5 d-grid gap-4">
-        <section class="card border-0 shadow-sm" aria-labelledby="account-heading">
-          <div class="card-body p-4">
-            <h2 id="account-heading" class="h5 mb-3">Account details</h2>
+        <section class="hw-surface" aria-labelledby="account-heading">
+          <div class="p-4">
+            <h2 id="account-heading" class="hw-section-title mb-3">Account details</h2>
             <dl class="row mb-0">
               <dt class="col-sm-4 text-secondary fw-normal">Name</dt>
               <dd class="col-sm-8">{{ user?.name }}</dd>
@@ -117,24 +116,24 @@ onMounted(async () => {
           </div>
         </section>
 
-        <section class="card border-0 shadow-sm" aria-labelledby="name-heading">
-          <form class="card-body p-4" @submit.prevent="saveName">
-            <h2 id="name-heading" class="h5 mb-3">Change name</h2>
+        <section class="hw-surface" aria-labelledby="name-heading">
+          <form class="p-4" @submit.prevent="saveName">
+            <h2 id="name-heading" class="hw-section-title mb-3">Change name</h2>
             <label for="profile-name" class="form-label">Display name</label>
             <input id="profile-name" v-model="name" class="form-control" maxlength="60" autocomplete="name" required />
             <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
-              <button type="submit" class="btn btn-danger" :disabled="!nameChanged || savingName">
+              <button type="submit" class="btn hw-btn-primary" :disabled="!nameChanged || savingName">
                 {{ savingName ? 'Saving...' : 'Save name' }}
               </button>
-              <span v-if="nameMessage" class="small text-success" role="status">{{ nameMessage }}</span>
-              <span v-if="nameError" class="small text-danger" role="alert">{{ nameError }}</span>
+              <span v-if="nameMessage" class="small text-secondary" role="status">{{ nameMessage }}</span>
+              <span v-if="nameError" class="small text-brick" role="alert">{{ nameError }}</span>
             </div>
           </form>
         </section>
 
-        <section class="card border-0 shadow-sm" aria-labelledby="password-heading">
-          <form class="card-body p-4 d-grid gap-3" @submit.prevent="savePassword">
-            <h2 id="password-heading" class="h5 mb-0">Change password</h2>
+        <section class="hw-surface" aria-labelledby="password-heading">
+          <form class="p-4 d-grid gap-3" @submit.prevent="savePassword">
+            <h2 id="password-heading" class="hw-section-title mb-0">Change password</h2>
             <div>
               <label for="current-password" class="form-label">Current password</label>
               <PasswordInput id="current-password" v-model="currentPassword" autocomplete="current-password" required />
@@ -150,11 +149,11 @@ onMounted(async () => {
               <PasswordInput id="confirm-password" v-model="confirmPassword" autocomplete="new-password" required />
             </div>
             <div class="d-flex flex-wrap align-items-center gap-3">
-              <button type="submit" class="btn btn-danger" :disabled="savingPassword">
+              <button type="submit" class="btn hw-btn-primary" :disabled="savingPassword">
                 {{ savingPassword ? 'Saving...' : 'Change password' }}
               </button>
-              <span v-if="passwordMessage" class="small text-success" role="status">{{ passwordMessage }}</span>
-              <span v-if="passwordError" class="small text-danger" role="alert">{{ passwordError }}</span>
+              <span v-if="passwordMessage" class="small text-secondary" role="status">{{ passwordMessage }}</span>
+              <span v-if="passwordError" class="small text-brick" role="alert">{{ passwordError }}</span>
             </div>
           </form>
         </section>
@@ -163,9 +162,9 @@ onMounted(async () => {
       </div>
 
       <section id="alerts" class="col-lg-7" aria-labelledby="alerts-heading">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body p-4">
-            <h2 id="alerts-heading" class="h5 mb-1">Favourite reminders</h2>
+        <div class="hw-surface">
+          <div class="p-4">
+            <h2 id="alerts-heading" class="hw-section-title mb-1">Favourite reminders</h2>
             <p class="small text-secondary mb-3">
               Choose when you usually visit each favourite. Your choices are saved for upcoming reminders;
               HawkerWatch doesn't send notifications yet.

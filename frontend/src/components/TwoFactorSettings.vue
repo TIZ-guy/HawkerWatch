@@ -69,11 +69,11 @@ function cancel() {
 </script>
 
 <template>
-  <section class="card border-0 shadow-sm" aria-labelledby="two-factor-heading">
-    <div class="card-body p-4 d-grid gap-3">
+  <section class="hw-surface" aria-labelledby="two-factor-heading">
+    <div class="p-4 d-grid gap-3">
       <div class="d-flex align-items-center justify-content-between gap-2">
-        <h2 id="two-factor-heading" class="h5 mb-0">Two-factor login</h2>
-        <span class="badge" :class="enabled ? 'text-bg-success' : 'text-bg-secondary'">{{ enabled ? 'On' : 'Off' }}</span>
+        <h2 id="two-factor-heading" class="hw-section-title mb-0">Two-factor login</h2>
+        <span class="hw-tag">{{ enabled ? 'On' : 'Off' }}</span>
       </div>
 
       <p class="small text-secondary mb-0">
@@ -83,7 +83,7 @@ function cancel() {
 
       <!-- Off, not started -->
       <div v-if="!enabled && !setup">
-        <button type="button" class="btn btn-danger" :disabled="busy" @click="startSetup">
+        <button type="button" class="btn hw-btn-primary" :disabled="busy" @click="startSetup">
           {{ busy ? 'Starting...' : 'Set up two-factor login' }}
         </button>
       </div>
@@ -113,7 +113,7 @@ function cancel() {
              open the app directly instead, or copy the key. -->
         <div v-if="onPhone" class="small d-grid gap-2">
           <p class="fw-semibold mb-0">2. Add HawkerWatch to the app</p>
-          <a :href="setup.otpauthUrl" class="btn btn-outline-danger">
+          <a :href="setup.otpauthUrl" class="btn btn-outline-dark">
             <i class="bi bi-box-arrow-up-right me-2" aria-hidden="true"></i>Open in authenticator app
           </a>
           <p class="text-secondary mb-0">
@@ -147,14 +147,14 @@ function cancel() {
             autocomplete="one-time-code" maxlength="7" placeholder="123456" required />
         </div>
         <div class="d-flex flex-wrap gap-2">
-          <button type="submit" class="btn btn-danger" :disabled="busy">{{ busy ? 'Checking...' : 'Turn on' }}</button>
+          <button type="submit" class="btn hw-btn-primary" :disabled="busy">{{ busy ? 'Checking...' : 'Turn on' }}</button>
           <button type="button" class="btn btn-outline-secondary" :disabled="busy" @click="cancel">Cancel</button>
         </div>
       </form>
 
       <!-- On -->
       <div v-else-if="enabled && !turningOff">
-        <button type="button" class="btn btn-outline-danger" @click="turningOff = true; message = ''">
+        <button type="button" class="btn btn-outline-dark" @click="turningOff = true; message = ''">
           Turn off two-factor login
         </button>
       </div>
@@ -171,13 +171,13 @@ function cancel() {
             autocomplete="one-time-code" maxlength="7" placeholder="123456" required />
         </div>
         <div class="d-flex flex-wrap gap-2">
-          <button type="submit" class="btn btn-danger" :disabled="busy">{{ busy ? 'Checking...' : 'Turn off' }}</button>
+          <button type="submit" class="btn btn-outline-dark" :disabled="busy">{{ busy ? 'Checking...' : 'Turn off' }}</button>
           <button type="button" class="btn btn-outline-secondary" :disabled="busy" @click="cancel">Cancel</button>
         </div>
       </form>
 
-      <p v-if="message" class="small text-success mb-0" role="status">{{ message }}</p>
-      <p v-if="error" class="small text-danger mb-0" role="alert">{{ error }}</p>
+      <p v-if="message" class="small text-secondary mb-0" role="status">{{ message }}</p>
+      <p v-if="error" class="small text-brick mb-0" role="alert">{{ error }}</p>
     </div>
   </section>
 </template>

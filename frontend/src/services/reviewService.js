@@ -73,3 +73,14 @@ export async function deleteReviewPhoto(reviewId, photoId) {
 export function photoUrl(photoId) {
   return `${API_URL}/review-photos/${photoId}`
 }
+
+// The newest current reviews across all of a centre's stalls (at most 20): { count, reviews },
+// each review with stall: { _id, name }. Used by the centre page's Reviews tab and photo strip.
+export async function getCentreReviews(centreId) {
+  try {
+    const response = await axios.get(`${API_URL}/hawker-centres/${centreId}/reviews`)
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}

@@ -1,41 +1,234 @@
+/* HawkerWatch design tokens. Light only.
+   Colour rule: the only coloured things on a page are queue statuses and the one
+   brick accent on primary actions. Everything else is ink, dim or a neutral line. */
 :root {
-  --hw-cream: #fff9f2;
-  --hw-red: #d94a3a;
-  --hw-orange: #f39c4a;
-  --hw-ink: #252525;
+  --bg: #ffffff;
+  --sub: #faf9f7;          /* hover fill, tag fill, zebra */
+  --line: #e6e3dd;         /* default border */
+  --line-strong: #d6d2ca;  /* input border, pill border */
+  --ink: #1a1a19;
+  --dim: #6f6b64;          /* secondary text */
+  --brick: #a32f26;        /* primary action only */
+
+  /* queue status */
+  --q-open: #1d6b4f;
+  --q-short: #2b6397;
+  --q-mod: #96620f;
+  --q-long: #a32f26;
+  --q-shut: #83807a;
+
+  /* notice */
+  --warn-bg: #fdf8ea;
+  --warn-line: #ecd9a8;
+  --warn-ink: #7c5a08;
+
+  --radius: 12px;          /* cards, list rows */
+  --radius-sm: 8px;        /* inputs, buttons, small tiles */
+
+  /* Bootstrap overrides, so its components inherit the system */
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--ink);
+  --bs-secondary-color: var(--dim);
+  --bs-border-color: var(--line);
+  --bs-border-radius: var(--radius-sm);
+  --bs-border-radius-lg: var(--radius);
+  --bs-link-color: var(--brick);
+  --bs-link-hover-color: #7f241e;
+  --bs-font-sans-serif: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
 }
 
 body {
-  background: var(--hw-cream);
-  color: var(--hw-ink);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--bs-font-sans-serif);
+  -webkit-font-smoothing: antialiased;
 }
 
-.navbar-brand,
-.nav-link,
-.btn,
-.form-control,
-.input-group-text {
-  border-radius: 0.5rem;
+/* Headings are tight and heavy; this is the main thing that stops it looking
+   like default Bootstrap. */
+h1, h2, h3, h4, h5, .hw-title {
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
-.nav-link.router-link-active {
-  color: var(--hw-red) !important;
+h1, h2 { text-wrap: balance; }
+
+/* Figures, timestamps and unit numbers line up in columns */
+.hw-mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Queue status: a dot plus a label, coloured by status */
+.hw-q {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hw-q::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.hw-q-open { color: var(--q-open); }
+.hw-q-short { color: var(--q-short); }
+.hw-q-mod { color: var(--q-mod); }
+.hw-q-long { color: var(--q-long); }
+.hw-q-shut { color: var(--q-shut); }
+
+/* Soft pill version, for use inside dense rows where a dot is too small */
+.hw-pill { font-weight: 700; border-radius: 999px; padding: 0.25rem 0.55rem; font-size: 0.78rem; }
+.hw-pill-open { background: #e6f2ec; color: var(--q-open); }
+.hw-pill-short { background: #e7eff6; color: var(--q-short); }
+.hw-pill-mod { background: #fbf1dc; color: var(--q-mod); }
+.hw-pill-long { background: #f8e8e6; color: var(--q-long); }
+.hw-pill-shut { background: var(--sub); color: var(--q-shut); }
+
+/* One bordered surface, used for list rows and rail panels only */
+.hw-surface {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+a.hw-surface:hover, .hw-surface-hover:hover {
+  border-color: var(--line-strong);
+  background: var(--sub);
+}
+
+/* Filter pill */
+.hw-chip {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+}
+
+.btn-check:checked + .hw-chip,
+.hw-chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
   font-weight: 600;
 }
 
-.eyebrow {
-  color: var(--hw-red);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+/* A chip that is a <label> for a radio button (e.g. the report form) */
+label.hw-chip { cursor: pointer; }
+.btn-check:focus-visible + .hw-chip { outline: 2px solid var(--brick); outline-offset: 2px; }
+
+/* Photo frames. Fixed heights so rows stay aligned when a photoUrl is missing. */
+.hw-photo { background: var(--sub); object-fit: cover; display: block; width: 100%; }
+/* 4:3, the shape of most NEA photos */
+.hw-photo-thumb { height: 108px; border-radius: var(--radius-sm); }
+@media (max-width: 460px) { .hw-photo-thumb { height: 72px; } }
+.hw-photo-banner { height: clamp(220px, 34vw, 380px); border-radius: var(--radius); }
+.hw-photo-tile { width: 92px; height: 70px; border-radius: var(--radius-sm); }
+
+/* Placeholder shown when a centre has no photoUrl */
+.hw-photo-none {
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  background: var(--sub);
+  border: 1px solid var(--line);
+}
+
+:focus-visible { outline: 2px solid var(--brick); outline-offset: 2px; }
+
+/* ---- Small helpers the rebuild uses ---- */
+
+/* Grid and flex children holding text need this, or long names push the layout wider */
+.min-w-0 { min-width: 0; }
+
+/* The one brick accent: links and icons that need it, and the primary action of a view */
+.text-brick { color: var(--brick) !important; }
+
+.btn.hw-btn-primary {
+  background: var(--brick);
+  color: #fff;
+  border: 0;
+}
+
+.btn.hw-btn-primary:hover,
+.btn.hw-btn-primary:focus-visible {
+  background: #7f241e;
+  color: #fff;
+}
+
+.btn.hw-btn-primary:disabled {
+  background: var(--brick);
+  color: #fff;
+  opacity: 0.65;
+}
+
+/* Inputs read as a neutral line, a little stronger than other borders */
+.form-control,
+.form-select,
+.input-group-text {
+  border-color: var(--line-strong);
+}
+
+.input-group-text {
+  background: var(--sub);
+  color: var(--dim);
+}
+
+/* Navbar: the active page is ink with an underline, not coloured text */
+.navbar .nav-link {
+  color: var(--dim);
+  border-bottom: 2px solid transparent;
+}
+
+.navbar .nav-link:hover {
+  color: var(--ink);
+}
+
+.navbar .nav-link.router-link-active {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}
+
+/* Small uppercase label above a group of controls or a panel */
+.hw-label {
+  color: var(--dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.accent-card {
-  background: #fff1df;
+/* Small bordered tag, e.g. a cuisine on a centre row */
+.hw-tag {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--sub);
+  color: var(--dim);
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
 }
 
-/* Search boxes have their own ✕ button, so hide the browser's built-in one to avoid two */
-input[type='search']::-webkit-search-cancel-button {
-  display: none;
+/* Section headings on settings pages (Profile), so they read as settings rather than content */
+.hw-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Map labels (Leaflet tooltips): a line border instead of Leaflet's drop shadow */
+.leaflet-container .leaflet-tooltip {
+  box-shadow: none;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
 }

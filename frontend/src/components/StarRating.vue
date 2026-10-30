@@ -32,13 +32,13 @@ const stars = computed(() => {
       <i v-for="(icon, index) in stars" :key="index" class="bi" :class="icon" aria-hidden="true"></i>
     </span>
     <span v-if="showNumber" class="fw-semibold">{{ rating.toFixed(1) }}</span>
-    <span v-if="count !== null" class="text-secondary">({{ count }} review{{ count === 1 ? '' : 's' }})</span>
+    <span v-if="count !== null" class="small text-secondary">({{ count }} review{{ count === 1 ? '' : 's' }})</span>
   </span>
 </template>
 
 <style scoped>
 .stars {
-  color: #f5a623;
+  color: var(--q-mod);
   white-space: nowrap;
 }
 </style>

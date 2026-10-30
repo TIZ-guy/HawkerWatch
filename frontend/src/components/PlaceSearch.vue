@@ -61,17 +61,13 @@ async function search() {
 
 <template>
   <div class="place-search">
-    <!-- Kept outside the input group: Bootstrap only rounds the first box in a group, and a hidden label there would square off the left side -->
-    <label :for="props.place ? null : inputId" :class="props.label ? 'form-label fw-semibold' : 'visually-hidden'">
-      {{ props.label || 'Postal code or place' }}
-    </label>
-
-    <!-- A place is in use: show it in the same box shape as the search, so the layout doesn't jump -->
-    <div v-if="props.place" class="input-group">
-      <span class="input-group-text bg-white"><i class="bi bi-pin-map-fill text-danger" aria-hidden="true"></i></span>
-      <span class="form-control text-truncate" :title="props.place.label">{{ props.place.label }}</span>
-      <button type="button" class="btn btn-outline-secondary" aria-label="Clear place" v-on:click="emit('cleared')">
-        <i class="bi bi-x-lg" aria-hidden="true"></i>
+    <!-- A place is in use: show it, with a way to remove it -->
+    <div v-if="props.place" class="d-flex flex-wrap align-items-center gap-2">
+      <span class="hw-tag fs-6">
+        <i class="bi bi-pin-map-fill me-1" aria-hidden="true"></i>{{ props.place.label }}
+      </span>
+      <button type="button" class="btn btn-link btn-sm p-0 text-secondary" v-on:click="emit('cleared')">
+        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Clear
       </button>
     </div>
 
@@ -87,13 +83,13 @@ async function search() {
         maxlength="60"
         autocomplete="postal-code"
       />
-      <button type="submit" class="btn btn-outline-secondary" :disabled="searching">
+      <button type="submit" class="btn btn-outline-dark" :disabled="searching">
         <span v-if="searching" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
         <span :class="{ 'visually-hidden': searching }">Find</span>
       </button>
     </form>
 
-    <p v-if="errorMessage" class="small text-danger mt-2 mb-0" role="alert">{{ errorMessage }}</p>
+    <p v-if="errorMessage" class="small text-brick mt-2 mb-0" role="alert">{{ errorMessage }}</p>
 
     <!-- Several matches: let the user choose -->
     <div v-if="matches.length" class="mt-2">

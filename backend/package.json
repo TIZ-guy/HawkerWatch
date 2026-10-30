@@ -8,7 +8,9 @@
     "start": "node server.js",
     "test": "node --test",
     "seed": "node scripts/seedMockData.js",
-    "import:centres": "node scripts/importHawkerClosures.js"
+    "import:centres": "node scripts/importHawkerClosures.js",
+    "import:stalls": "node scripts/importStalls.js",
+    "migrate:cuisines": "node scripts/migrateCuisines.js"
   },
   "dependencies": {
     "axios": "^1.20.0",

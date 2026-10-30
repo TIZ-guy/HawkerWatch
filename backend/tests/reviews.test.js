@@ -2,10 +2,11 @@
 // so these tests run without MongoDB (the same way CI runs them).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import app from '../app.js';
+import { startServer } from './startServer.js';
 import Review from '../models/Review.js';
 import ReviewPhoto from '../models/ReviewPhoto.js';
 import Stall from '../models/Stall.js';
+import HawkerCentre from '../models/HawkerCentre.js';
 import User from '../models/User.js';
 import { AUTH_COOKIE, signToken } from '../utils/authToken.js';
 import { REVIEW_TEXT_MAX_LENGTH, MAX_PHOTO_BYTES } from '../utils/constants.js';
@@ -29,14 +30,6 @@ function fakeQuery(result) {
         lean() { return this; },
         then(resolve, reject) { return Promise.resolve(result).then(resolve, reject); }
     };
-}
-
-// Starts the real app on a free port.
-async function startServer(t) {
-    const server = app.listen(0);
-    t.after(() => server.close());
-    await new Promise((resolve) => server.once('listening', resolve));
-    return `http://127.0.0.1:${server.address().port}`;
 }
 
 // Logs `user` in: protect() looks the user up again, so User.findById returns them.
@@ -436,4 +429,35 @@ test('reviewExpiresAt is 90 days after the last edit, or after posting if never 
     const edited = new Date('2026-02-01T00:00:00Z');
     assert.equal(reviewExpiresAt({ createdAt: posted, editedAt: null }).toISOString(), '2026-04-01T00:00:00.000Z');
     assert.equal(reviewExpiresAt({ createdAt: posted, editedAt: edited }).toISOString(), '2026-05-02T00:00:00.000Z');
+});
+
+
+test('GET /api/hawker-centres/:id/reviews lists the newest reviews across the centre, with stall names', async (t) => {
+    const CENTRE_ID = '64b7f0c2a1b2c3d4e5f60718';
+    t.mock.method(HawkerCentre, 'exists', async () => ({ _id: CENTRE_ID }));
+    t.mock.method(Stall, 'find', () => ({ select() { return this; }, lean: async () => [{ _id: STALL_ID, name: 'Hock Lam Chicken Rice' }] }));
+    const find = t.mock.method(Review, 'find', () => ({
+        populate() { return this; },
+        sort() { return this; },
+        limit() { return this; },
+        lean: async () => [{ _id: REVIEW_ID, stall: STALL_ID, rating: 5, text: 'Great', photos: ['64b7f0c2a1b2c3d4e5f60740'], user: { _id: author._id, name: 'Author' } }]
+    }));
+    const base = await startServer(t);
+
+    const body = await (await fetch(`${base}/api/hawker-centres/${CENTRE_ID}/reviews`)).json();
+
+    assert.equal(body.data.count, 1);
+    assert.deepEqual(body.data.reviews[0].stall, { _id: STALL_ID, name: 'Hock Lam Chicken Rice' });
+    assert.deepEqual(body.data.reviews[0].photos, ['64b7f0c2a1b2c3d4e5f60740']);
+    assert.deepEqual(body.data.reviews[0].user, { _id: author._id, name: 'Author' });
+    // Only reviews of that centre's stalls
+    assert.deepEqual(find.mock.calls[0].arguments[0].stall.$in, [STALL_ID]);
+});
+
+test('GET /api/hawker-centres/:id/reviews gives 404 when the centre is missing', async (t) => {
+    t.mock.method(HawkerCentre, 'exists', async () => null);
+    const base = await startServer(t);
+
+    const response = await fetch(`${base}/api/hawker-centres/64b7f0c2a1b2c3d4e5f60718/reviews`);
+    assert.equal(response.status, 404);
 });

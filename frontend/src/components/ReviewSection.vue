@@ -282,8 +282,8 @@ async function adminRemovePhoto(review, photoId) {
       <PhotoGallery v-if="galleryPhotos.length" class="mb-4" :photos="galleryPhotos" v-on:select="goToReview" />
 
       <!-- Writing a new review, or editing your own -->
-      <div v-if="showForm" class="card border-0 shadow-sm mb-4">
-        <form class="card-body p-4" v-on:submit.prevent="saveReview">
+      <div v-if="showForm" class="hw-surface mb-4">
+        <form class="p-4" v-on:submit.prevent="saveReview">
           <fieldset>
             <legend class="small fw-semibold mb-1">
               {{ myReview ? 'Edit your review' : `Rate ${stallName}` }}
@@ -341,19 +341,19 @@ async function adminRemovePhoto(review, photoId) {
 
           <div class="d-flex justify-content-end gap-2 mt-3">
             <button v-if="myReview" type="button" class="btn btn-sm btn-link text-secondary" v-on:click="resetForm">Cancel</button>
-            <button type="submit" class="btn btn-sm btn-danger" :disabled="saving">
+            <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="saving">
               {{ saving ? 'Saving...' : myReview ? 'Save changes' : 'Post review' }}
             </button>
           </div>
-          <p v-if="formError" class="small text-danger mt-2 mb-0" role="alert">{{ formError }}</p>
+          <p v-if="formError" class="small text-brick mt-2 mb-0" role="alert">{{ formError }}</p>
         </form>
       </div>
 
       <!-- Logged out -->
-      <div v-else-if="!auth.user" class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div v-else-if="!auth.user" class="hw-surface mb-4">
+        <div class="p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="text-secondary">Log in to rate and review {{ stallName }}.</span>
-          <button type="button" class="btn btn-sm btn-outline-danger" v-on:click="goToLogin">Log in to review</button>
+          <button type="button" class="btn btn-sm btn-outline-dark" v-on:click="goToLogin">Log in to review</button>
         </div>
       </div>
 
@@ -363,10 +363,10 @@ async function adminRemovePhoto(review, photoId) {
           <li
             v-if="!(isMine(review) && editing)"
             :id="`review-${review._id}`"
-            class="card border-0 shadow-sm review-card"
+            class="hw-surface review-card"
             :class="{ 'my-review': isMine(review), highlighted: highlightedId === review._id }"
           >
-            <div class="card-body p-3">
+            <div class="p-3">
               <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-1">
                 <span v-if="isMine(review)" class="fw-semibold">Your review</span>
                 <span v-else class="fw-semibold">
@@ -404,7 +404,7 @@ async function adminRemovePhoto(review, photoId) {
               <template v-if="isMine(review) || isAdmin">
                 <div v-if="confirmingDeleteId === review._id" class="d-flex flex-wrap align-items-center gap-2 mt-2">
                   <span class="small">{{ isMine(review) ? 'Delete your review?' : 'Delete this review?' }}</span>
-                  <button type="button" class="btn btn-sm btn-danger" :disabled="deletingId === review._id" v-on:click="confirmDelete(review)">
+                  <button type="button" class="btn btn-sm btn-outline-dark" :disabled="deletingId === review._id" v-on:click="confirmDelete(review)">
                     {{ deletingId === review._id ? 'Deleting...' : 'Delete' }}
                   </button>
                   <button type="button" class="btn btn-sm btn-link text-secondary" v-on:click="confirmingDeleteId = ''">Cancel</button>
@@ -417,14 +417,14 @@ async function adminRemovePhoto(review, photoId) {
                     <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ isMine(review) ? 'Delete' : 'Delete (admin)' }}
                   </button>
                 </div>
-                <p v-if="deleteError && confirmingDeleteId === review._id" class="small text-danger mt-2 mb-0" role="alert">{{ deleteError }}</p>
+                <p v-if="deleteError && confirmingDeleteId === review._id" class="small text-brick mt-2 mb-0" role="alert">{{ deleteError }}</p>
               </template>
             </div>
           </li>
         </template>
       </ul>
 
-      <div v-else class="alert alert-light border">No reviews yet. Be the first to rate {{ stallName }}.</div>
+      <div v-else class="hw-surface p-3 small text-secondary">No reviews yet. Be the first to rate {{ stallName }}.</div>
     </template>
   </section>
 </template>
@@ -438,16 +438,15 @@ async function adminRemovePhoto(review, photoId) {
 }
 
 .review-card {
-  transition: box-shadow 0.3s;
 }
 
 .my-review {
-  border-left: 4px solid var(--hw-orange) !important;
+  border-left: 4px solid var(--line-strong) !important;
 }
 
 /* The review picked in the slideshow */
 .highlighted {
-  outline: 3px solid var(--hw-orange);
+  outline: 3px solid var(--line-strong);
   outline-offset: 2px;
 }
 
@@ -484,13 +483,13 @@ async function adminRemovePhoto(review, photoId) {
 }
 
 .add-photo:hover {
-  border-color: var(--hw-orange);
-  color: var(--hw-orange);
+  border-color: var(--line-strong);
+  color: var(--line-strong);
 }
 
 /* Shows the focus ring on the label when the hidden file input has keyboard focus */
 #review-photos:focus-visible + .add-photo {
-  outline: 2px solid var(--hw-orange);
+  outline: 2px solid var(--line-strong);
 }
 
 .remove-photo {

@@ -140,8 +140,8 @@ watch(() => props.centreId, (id) => {
       Comments <span v-if="!loading && !loadError" class="text-secondary fs-5">({{ comments.length }})</span>
     </h2>
 
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body p-4">
+    <div class="hw-surface mb-4">
+      <div class="p-4">
         <form v-if="auth.user" @submit.prevent="post">
           <label for="new-comment" class="form-label small fw-semibold">Share a tip about this centre</label>
           <textarea
@@ -154,16 +154,16 @@ watch(() => props.centreId, (id) => {
           ></textarea>
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
             <span class="small text-secondary">{{ newText.length }} / {{ MAX_LENGTH }}</span>
-            <button type="submit" class="btn btn-sm btn-danger" :disabled="posting">
+            <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="posting">
               {{ posting ? 'Posting...' : 'Post comment' }}
             </button>
           </div>
-          <p v-if="postError" class="small text-danger mt-2 mb-0" role="alert">{{ postError }}</p>
+          <p v-if="postError" class="small text-brick mt-2 mb-0" role="alert">{{ postError }}</p>
         </form>
 
         <div v-else class="d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="text-secondary">Log in to share a tip about this centre.</span>
-          <button type="button" class="btn btn-sm btn-outline-danger" @click="goToLogin">Log in to comment</button>
+          <button type="button" class="btn btn-sm btn-outline-dark" @click="goToLogin">Log in to comment</button>
         </div>
       </div>
     </div>
@@ -173,12 +173,12 @@ watch(() => props.centreId, (id) => {
     <ErrorState v-else-if="loadError" :message="loadError" retryable @retry="load(centreId)" />
 
     <ul v-else-if="comments.length" class="list-unstyled d-flex flex-column gap-3 mb-0">
-      <li v-for="comment in comments" :key="comment._id" class="card border-0 shadow-sm">
-        <div class="card-body p-3">
+      <li v-for="comment in comments" :key="comment._id" class="hw-surface">
+        <div class="p-3">
           <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-1">
             <span class="fw-semibold">
               <i class="bi bi-person-circle me-1 text-secondary" aria-hidden="true"></i>{{ comment.user?.name || 'Deleted user' }}
-              <span v-if="isMine(comment)" class="badge text-bg-light border ms-1">You</span>
+              <span v-if="isMine(comment)" class="badge hw-tag fw-normal ms-1">You</span>
             </span>
             <span class="small text-secondary" :title="formatDate(comment.createdAt)">
               {{ timeAgo(comment.createdAt) }}<span v-if="wasEdited(comment)"> · edited</span>
@@ -188,9 +188,9 @@ watch(() => props.centreId, (id) => {
           <form v-if="editingId === comment._id" @submit.prevent="saveEdit(comment)">
             <label :for="`edit-${comment._id}`" class="visually-hidden">Edit your comment</label>
             <textarea :id="`edit-${comment._id}`" v-model="editText" class="form-control" rows="3" :maxlength="MAX_LENGTH"></textarea>
-            <p v-if="editError" class="small text-danger mt-2 mb-0" role="alert">{{ editError }}</p>
+            <p v-if="editError" class="small text-brick mt-2 mb-0" role="alert">{{ editError }}</p>
             <div class="d-flex gap-2 mt-2">
-              <button type="submit" class="btn btn-sm btn-danger" :disabled="saving">{{ saving ? 'Saving...' : 'Save' }}</button>
+              <button type="submit" class="btn btn-sm btn-outline-dark" :disabled="saving">{{ saving ? 'Saving...' : 'Save' }}</button>
               <button type="button" class="btn btn-sm btn-link text-secondary" @click="editingId = ''">Cancel</button>
             </div>
           </form>
@@ -200,7 +200,7 @@ watch(() => props.centreId, (id) => {
 
             <div v-if="confirmingDeleteId === comment._id" class="d-flex flex-wrap align-items-center gap-2 mt-2">
               <span class="small">Delete this comment?</span>
-              <button type="button" class="btn btn-sm btn-danger" :disabled="deletingId === comment._id" @click="confirmDelete(comment)">
+              <button type="button" class="btn btn-sm btn-outline-dark" :disabled="deletingId === comment._id" @click="confirmDelete(comment)">
                 {{ deletingId === comment._id ? 'Deleting...' : 'Delete' }}
               </button>
               <button type="button" class="btn btn-sm btn-link text-secondary" @click="confirmingDeleteId = ''">Cancel</button>
@@ -213,13 +213,13 @@ watch(() => props.centreId, (id) => {
                 <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
               </button>
             </div>
-            <p v-if="deleteError.id === comment._id" class="small text-danger mt-2 mb-0" role="alert">{{ deleteError.message }}</p>
+            <p v-if="deleteError.id === comment._id" class="small text-brick mt-2 mb-0" role="alert">{{ deleteError.message }}</p>
           </template>
         </div>
       </li>
     </ul>
 
-    <div v-else class="alert alert-light border">No comments yet. Be the first to share a tip.</div>
+    <div v-else class="hw-surface p-3 small text-secondary">No comments yet. Be the first to share a tip.</div>
   </section>
 </template>
 

@@ -77,10 +77,11 @@ function onReviewsChanged(rating) {
   stall.value.rating = rating
 }
 
-// Keep the centre, live report and rating, and take the new name, cuisine and unit number
+// Keep the centre, live report and rating, and take the new name, cuisine, dish and unit number
 function onStallUpdated(updated) {
   stall.value.name = updated.name
   stall.value.cuisine = updated.cuisine
+  stall.value.speciality = updated.speciality
   stall.value.unitNumber = updated.unitNumber
   editing.value = false
 }
@@ -107,31 +108,38 @@ watch(() => route.params.id, (id) => {
 </script>
 
 <template>
-  <main class="container py-5">
-    <RouterLink v-if="stall && stall.hawkerCentre" :to="`/hawker-centres/${stall.hawkerCentre._id}#stall-${stall._id}`" class="text-decoration-none small">
-      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ stall.hawkerCentre.name }}
-    </RouterLink>
-    <RouterLink v-else to="/" class="text-decoration-none small">
-      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All hawker centres
-    </RouterLink>
+  <main class="container py-4">
+    <nav aria-label="Breadcrumb" class="small mb-3">
+      <RouterLink
+        v-if="stall && stall.hawkerCentre"
+        :to="`/hawker-centres/${stall.hawkerCentre._id}#stall-${stall._id}`"
+        class="text-secondary text-decoration-none"
+      >
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ stall.hawkerCentre.name }}
+      </RouterLink>
+      <RouterLink v-else to="/" class="text-secondary text-decoration-none">
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All hawker centres
+      </RouterLink>
+    </nav>
 
     <LoadingState v-if="loading" class="mt-3" message="Loading stall..." />
 
     <ErrorState v-else-if="errorMessage" class="mt-3" :message="errorMessage" :retryable="!notFound" v-on:retry="loadStall" />
 
     <template v-else-if="stall">
-      <header class="mt-3 mb-4">
-        <span class="eyebrow">Stall</span>
-        <h1 class="display-6 fw-bold mt-1 mb-2">{{ stall.name }}</h1>
+      <header class="mb-4">
+        <h1 class="display-6 mb-2">{{ stall.name }}</h1>
+        <!-- One meta line: dish, cuisine, unit, centre -->
         <p class="text-secondary mb-2">
-          <span v-if="stall.cuisine"><i class="bi bi-egg-fried me-1" aria-hidden="true"></i>{{ stall.cuisine }}</span>
-          <span v-if="stall.cuisine && stall.unitNumber"> · </span>
-          <span v-if="stall.unitNumber">Unit #{{ stall.unitNumber }}</span>
-        </p>
-        <p v-if="stall.hawkerCentre" class="text-secondary mb-2">
-          <i class="bi bi-shop me-1" aria-hidden="true"></i>
-          <RouterLink :to="`/hawker-centres/${stall.hawkerCentre._id}`" class="text-danger">{{ stall.hawkerCentre.name }}</RouterLink>,
-          {{ stall.hawkerCentre.address }}
+          <span v-if="stall.speciality"><i class="bi bi-egg-fried me-1" aria-hidden="true"></i>{{ stall.speciality }}</span>
+          <span v-if="stall.speciality && stall.cuisine"> · </span>
+          <span v-if="stall.cuisine"><i v-if="!stall.speciality" class="bi bi-egg-fried me-1" aria-hidden="true"></i>{{ stall.cuisine }}</span>
+          <span v-if="(stall.speciality || stall.cuisine) && stall.unitNumber"> · </span>
+          <span v-if="stall.unitNumber">Unit <span class="hw-mono">#{{ stall.unitNumber }}</span></span>
+          <template v-if="stall.hawkerCentre">
+            <span> · </span>
+            <RouterLink :to="`/hawker-centres/${stall.hawkerCentre._id}`" class="text-reset">{{ stall.hawkerCentre.name }}</RouterLink>
+          </template>
         </p>
         <p class="mb-3">
           <StarRating v-if="stall.rating && stall.rating.count > 0" :rating="stall.rating.average" :count="stall.rating.count" />
@@ -139,7 +147,7 @@ watch(() => route.params.id, (id) => {
         </p>
         <div class="d-flex flex-wrap gap-2">
           <FavouriteButton target-type="Stall" :target-id="stall._id" :name="stall.name" with-label />
-          <a href="#reviews" class="btn btn-sm btn-outline-danger">
+          <a href="#reviews" class="btn btn-sm hw-btn-primary">
             <i class="bi bi-star me-1" aria-hidden="true"></i>Write a review
           </a>
           <button v-if="canEdit && !editing" type="button" class="btn btn-sm btn-outline-secondary" v-on:click="editing = true">
@@ -152,11 +160,11 @@ watch(() => route.params.id, (id) => {
 
         <div v-if="confirmingRemove" class="alert alert-warning d-flex flex-wrap align-items-center gap-2 mt-3 mb-0" role="alert">
           <span>Remove {{ stall.name }}? It will be hidden everywhere; its reviews are kept.</span>
-          <button type="button" class="btn btn-sm btn-danger" :disabled="removing" v-on:click="confirmRemove">
+          <button type="button" class="btn btn-sm btn-outline-dark" :disabled="removing" v-on:click="confirmRemove">
             {{ removing ? 'Removing...' : 'Remove' }}
           </button>
           <button type="button" class="btn btn-sm btn-link text-secondary" v-on:click="confirmingRemove = false">Cancel</button>
-          <span v-if="removeError" class="w-100 small text-danger">{{ removeError }}</span>
+          <span v-if="removeError" class="w-100 small text-brick">{{ removeError }}</span>
         </div>
       </header>
 
@@ -168,7 +176,7 @@ watch(() => route.params.id, (id) => {
         </div>
         <div class="col-lg-6">
           <section aria-labelledby="status-heading">
-            <h2 id="status-heading" class="h5 mb-3">Live status</h2>
+            <h2 id="status-heading" class="h6 mb-2">Live status</h2>
             <StallCard :stall="stall" :centre="stall.hawkerCentre" status-only v-on:reported="onReported" v-on:changed="refreshStatus" />
           </section>
         </div>

@@ -28,6 +28,7 @@ flowchart LR
 | Authentication (register, log in, log out, current user, change name and password) | Done |
 | Account security: password rules with live checklist, show/hide password, Caps Lock warning, failed-login limit, unique emails and names | Done |
 | Discovery frontend: home page, centre detail page (with a OneMap map of the centre) and stall page | Done |
+| Light-theme UI (see `docs/ui-rebuild.md`): design tokens in `frontend/src/style.css`, list rows on Discover, a stall table with tabs and a map rail on centre pages, queue status as the only colour | Done |
 | Live stall count: how many stalls are listed at each centre, on centre cards and the centre page | Done |
 | Favourites: API, page, heart buttons, reminder preferences | Done (reminders are saved but not sent) |
 | Profile page | Done |
@@ -39,6 +40,8 @@ flowchart LR
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA data: all 123 hawker centres (address, location, photo, stall count) and their closures, imported from data.gov.sg and refreshed weekly | Done |
 | Stalls added by users (no official stall list exists); the person who added a stall or an admin can edit it, admins can remove it | Done |
+| Stall data: 1437 stalls for all 123 NEA centres from `backend/data/stalls.json` (`pnpm import:stalls`). Real stalls from published food guides for 28 well-known centres; **sample stalls (not real businesses) for the other 95** | Done |
+| Cuisine is one of 12 fixed categories (Chinese, Malay, Indian, Peranakan, Western, Japanese, Korean, Thai, Vietnamese, Dessert, Drinks, Others), with the dish in a separate `speciality` field; fixed filter chips | Done |
 | Postal code and place search (OneMap, no token needed) on the home page and Explore Map: centres nearest to the place, with the same 1 / 5 / 10 km distances as Near me | Done |
 | Centre comments: post, edit and delete your own; admins can delete any | Done |
 | Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
@@ -76,8 +79,10 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `pnpm build`: build the frontend
 - `pnpm test`: run backend tests
 - `pnpm test:unit`: run frontend unit tests once (Vitest). Inside `frontend/`, `pnpm test:unit` keeps watching and re-runs tests when files change
-- `pnpm seed`: replace the database contents with fictional demo data, then import the real NEA centres (3 centres, 10 stalls, live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, 3 centre comments, a demo login, and a demo login with two-factor login on). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `pnpm seed`: replace the database contents with the real NEA centres and closures (needs internet), the stalls in `backend/data/stalls.json`, and demo activity: live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, favourites, 3 centre comments, a demo login, and a demo login with two-factor login on. The demo activity is only on sample stalls (made-up businesses), mostly at Aljunied Ave 2 Blk 117 and Cheng San Market (Ang Mo Kio Ave 10 Blk 527). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
 - `pnpm import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
+- `pnpm import:stalls`: import the stalls in `backend/data/stalls.json`, matched to centres by NEA serial number (run `pnpm import:centres` first). Safe to run again: stalls are updated, not duplicated, and stalls added by users are left alone. Refuses to run in production, because most of the file is sample data
+- `pnpm migrate:cuisines`: one-off fix for databases from before cuisine became a category: moves the old dish name into `speciality` and sets `cuisine` (defaults to Chinese). Run it once if `pnpm seed` would wipe data you want to keep
 
 ## Trying the frontend
 
@@ -93,7 +98,7 @@ After `pnpm seed` and `pnpm dev`, open http://localhost:5173.
 
 To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. The other seeded users can't log in. Accounts you register yourself last until the next `pnpm seed`.
 
-With the seed data, Seaside Demo Hawker Centre is officially closed today, Kampong Demo Food Centre has cleaning in 5 days, and Kampong has 3 stalls with live reports.
+With the seed data, Aljunied Ave 2 Blk 117 has stalls with live reports and reviews with photos (open Hock Lam Chicken Rice for the photo slideshow), and closures come from the real NEA dates.
 
 ## Frontend structure
 
@@ -128,14 +133,15 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | PATCH | `/api/auth/me` | `{ name }`; login required |
 | PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required; same rules as register for the new password |
 | POST | `/api/auth/logout` | Clears the login cookie |
-| GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first; each centre has `stallCount` (stalls listed now) |
+| GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first; each centre has `stallCount` (stalls listed now); plus `cuisines` (categories of the listed stalls) and `live` (`{ stallsReported, latestStatus, latestReportAt }` from live reports, or `null`) |
 | GET | `/api/hawker-centres/:id` | Includes official `closures` and `stallCount` |
-| GET | `/api/hawker-centres/:id/stalls` | Optional `search`, `cuisine`; each stall has its newest live report as `liveReport` and its star rating as `rating: { average, count }` |
-| POST | `/api/hawker-centres/:id/stalls` | `{ name, cuisine, unitNumber }` (cuisine and unit number optional, unit like `01-23`); login required; 409 for a name or unit number already used there; rate limited |
+| GET | `/api/hawker-centres/:id/stalls` | Optional `search` (stall name or dish), `cuisine` (exact category); each stall has its newest live report as `liveReport` and its star rating as `rating: { average, count }` |
+| POST | `/api/hawker-centres/:id/stalls` | `{ name, cuisine, speciality, unitNumber }` (all but name optional; cuisine is one of the 12 categories, any capitals; speciality is the dish, up to 60 characters; unit like `01-23`); login required; 409 for a name or unit number already used there; rate limited |
 | GET | `/api/hawker-centres/:id/community-summary` | Live report counts by status |
-| GET | `/api/stalls` | Optional `search`, `cuisine`; includes the stall's centre name and address, and `rating` |
+| GET | `/api/hawker-centres/:id/reviews` | The newest current reviews across the centre's stalls (at most 20), each with `stall: { _id, name }`; for the centre page's Reviews tab and photo strip |
+| GET | `/api/stalls` | Optional `search` (stall name or dish), `cuisine` (exact category); includes the stall's centre name and address, and `rating` |
 | GET | `/api/stalls/:id` | Includes `liveReport`, `rating`, and the centre's location and official closures; 404 once removed |
-| PATCH | `/api/stalls/:id` | Any of `{ name, cuisine, unitNumber }`; login required; the person who added it or an admin |
+| PATCH | `/api/stalls/:id` | Any of `{ name, cuisine, speciality, unitNumber }`; login required; the person who added it or an admin |
 | DELETE | `/api/stalls/:id` | Admins only; hides the stall (its reviews are kept) |
 | GET | `/api/stalls/:id/reports` | Live reports, newest first |
 | GET | `/api/favourites` | Login required; the user's favourites with the stall or centre filled in |

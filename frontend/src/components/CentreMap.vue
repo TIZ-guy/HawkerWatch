@@ -25,7 +25,7 @@ onMounted(() => {
   })
   L.tileLayer(ONEMAP_TILES, { minZoom: 11, maxZoom: 19, detectRetina: true, attribution: ONEMAP_ATTRIBUTION }).addTo(map)
 
-  L.circleMarker([lat, lng], { radius: 10, weight: 3, color: '#ffffff', fillColor: '#dc3545', fillOpacity: 1 })
+  L.circleMarker([lat, lng], { radius: 10, weight: 3, color: '#ffffff', fillColor: '#a32f26', fillOpacity: 1 })
     .bindTooltip(props.centre.name, { permanent: true, direction: 'top', offset: [0, -10] })
     .addTo(map)
 })
