@@ -81,20 +81,20 @@ function startOver() {
 
         <div class="hw-surface">
           <form v-if="!challengeToken" class="p-4" novalidate @submit.prevent="submit">
-            <div v-if="error" class="alert alert-warning py-2" role="alert">{{ error }}</div>
+            <div v-if="error" class="alert alert-warning py-2" role="alert" data-testid="login-error">{{ error }}</div>
 
             <div class="mb-3">
               <label for="login-email" class="form-label fw-semibold">Email</label>
-              <input id="login-email" v-model.trim="form.email" type="email" class="form-control"
+              <input id="login-email" data-testid="login-email" v-model.trim="form.email" type="email" class="form-control"
                 autocomplete="email" required />
             </div>
 
             <div class="mb-4">
               <label for="login-password" class="form-label fw-semibold">Password</label>
-              <PasswordInput id="login-password" v-model="form.password" autocomplete="current-password" required />
+              <PasswordInput id="login-password" data-testid="login-password" v-model="form.password" autocomplete="current-password" required />
             </div>
 
-            <button type="submit" class="btn hw-btn-primary w-100" :disabled="submitting">
+            <button type="submit" class="btn hw-btn-primary w-100" data-testid="login-submit" :disabled="submitting">
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Logging in…' : 'Log in' }}
             </button>

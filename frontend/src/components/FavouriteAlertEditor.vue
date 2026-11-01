@@ -66,14 +66,14 @@ async function save() {
 </script>
 
 <template>
-  <form class="alert-row py-3" @submit.prevent="save">
+  <form class="alert-row py-3" data-testid="reminder-editor" @submit.prevent="save">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
       <div>
         <span class="fw-semibold">{{ name }}</span>
         <span class="badge hw-tag fw-normal ms-2">{{ typeLabel }}</span>
       </div>
       <div class="form-check form-switch mb-0">
-        <input :id="`${idPrefix}-enabled`" v-model="enabled" class="form-check-input" type="checkbox" role="switch" />
+        <input :id="`${idPrefix}-enabled`" data-testid="reminder-enabled" v-model="enabled" class="form-check-input" type="checkbox" role="switch" />
         <label class="form-check-label small" :for="`${idPrefix}-enabled`">Reminder {{ enabled ? 'on' : 'off' }}</label>
       </div>
     </div>
@@ -91,21 +91,21 @@ async function save() {
               :checked="days.includes(day.value)"
               @change="toggleDay(day.value)"
             />
-            <label class="btn btn-outline-secondary" :for="`${idPrefix}-day-${day.value}`">{{ day.short }}</label>
+            <label class="btn btn-outline-secondary" :data-testid="`reminder-day-${day.value}`" :for="`${idPrefix}-day-${day.value}`">{{ day.short }}</label>
           </template>
         </div>
       </div>
       <div>
         <label class="form-label small mb-1" :for="`${idPrefix}-time`">Time</label>
-        <input :id="`${idPrefix}-time`" v-model="time" type="time" class="form-control form-control-sm" />
+        <input :id="`${idPrefix}-time`" data-testid="reminder-time" v-model="time" type="time" class="form-control form-control-sm" />
       </div>
     </fieldset>
 
     <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
-      <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="!changed || saving">
+      <button type="submit" class="btn btn-sm hw-btn-primary" data-testid="reminder-save" :disabled="!changed || saving">
         {{ saving ? 'Saving...' : 'Save reminder' }}
       </button>
-      <span v-if="message" class="small text-secondary" role="status">{{ message }}</span>
+      <span v-if="message" class="small text-secondary" role="status" data-testid="reminder-message">{{ message }}</span>
       <span v-if="errorMessage" class="small text-brick" role="alert">{{ errorMessage }}</span>
     </div>
   </form>

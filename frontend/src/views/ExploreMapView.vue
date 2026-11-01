@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
     <div class="row g-4">
       <div class="col-lg-8">
         <div class="hw-surface overflow-hidden position-relative">
-          <div ref="mapElement" class="map" role="region" aria-label="Map of hawker centres in Singapore"></div>
+          <div ref="mapElement" class="map" data-testid="map-container" role="region" aria-label="Map of hawker centres in Singapore"></div>
           <div v-if="loading" class="map-overlay d-flex align-items-center justify-content-center gap-2 text-secondary" role="status">
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Loading hawker centres...
           </div>
@@ -308,7 +308,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <section v-if="centres.length" class="hw-surface overflow-hidden" aria-labelledby="map-list-heading">
+          <section v-if="centres.length" class="hw-surface overflow-hidden" aria-labelledby="map-list-heading" data-testid="map-centre-list">
             <div class="px-3 pt-3 pb-2 border-bottom">
               <h2 id="map-list-heading" class="h6 mb-0">
                 {{ listHeading }} <span class="hw-mono text-secondary fw-normal">({{ visibleCentres.length }})</span>
@@ -323,6 +323,7 @@ onBeforeUnmount(() => {
                 :key="centre._id"
                 type="button"
                 class="list-group-item list-group-item-action d-grid gap-1 text-start"
+                data-testid="map-centre-item"
                 :class="{ active: centre._id === selectedId }"
                 :aria-current="centre._id === selectedId"
                 @click="select(centre)"

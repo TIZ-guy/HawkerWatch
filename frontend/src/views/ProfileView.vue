@@ -107,7 +107,7 @@ onMounted(async () => {
               <dt class="col-sm-4 text-secondary fw-normal">Name</dt>
               <dd class="col-sm-8">{{ user?.name }}</dd>
               <dt class="col-sm-4 text-secondary fw-normal">Email</dt>
-              <dd class="col-sm-8">{{ user?.email }}</dd>
+              <dd class="col-sm-8" data-testid="profile-email">{{ user?.email }}</dd>
               <template v-if="memberSince">
                 <dt class="col-sm-4 text-secondary fw-normal">Member since</dt>
                 <dd class="col-sm-8 mb-0">{{ memberSince }}</dd>
@@ -161,7 +161,7 @@ onMounted(async () => {
         <TwoFactorSettings />
       </div>
 
-      <section id="alerts" class="col-lg-7" aria-labelledby="alerts-heading">
+      <section id="alerts" class="col-lg-7" aria-labelledby="alerts-heading" data-testid="profile-reminders">
         <div class="hw-surface">
           <div class="p-4">
             <h2 id="alerts-heading" class="hw-section-title mb-1">Favourite reminders</h2>

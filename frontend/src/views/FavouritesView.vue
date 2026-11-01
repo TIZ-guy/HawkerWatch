@@ -54,7 +54,7 @@ onMounted(load)
     <LoadingState v-if="loading" message="Loading your favourites..." />
     <ErrorState v-else-if="favourites.error" :message="favourites.error" retryable @retry="load" />
 
-    <div v-else-if="!favourites.items.length" class="hw-surface">
+    <div v-else-if="!favourites.items.length" class="hw-surface" data-testid="favourites-empty">
       <div class="p-4">
         <h2 class="h5">Nothing saved yet</h2>
         <p class="text-secondary">
@@ -70,7 +70,7 @@ onMounted(load)
         <div class="d-grid gap-3">
           <template v-for="favourite in centreFavourites" :key="favourite._id">
             <HawkerCentreCard v-if="favourite.target" :centre="favourite.target">
-              <p class="small text-secondary border-top pt-2 mb-0 position-relative z-2">
+              <p class="small text-secondary border-top pt-2 mb-0 position-relative z-2" data-testid="favourite-reminder">
                 <i class="bi bi-bell me-1" aria-hidden="true"></i>{{ formatAlert(favourite.alert) || 'No reminder set' }}
                 · <RouterLink to="/profile#alerts">Edit</RouterLink>
               </p>

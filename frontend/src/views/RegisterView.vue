@@ -49,33 +49,33 @@ async function submit() {
 
         <div class="hw-surface">
           <form class="p-4" novalidate @submit.prevent="submit">
-            <div v-if="error" class="alert alert-warning py-2" role="alert">{{ error }}</div>
+            <div v-if="error" class="alert alert-warning py-2" role="alert" data-testid="register-error">{{ error }}</div>
 
             <div class="mb-3">
               <label for="register-name" class="form-label fw-semibold">Name</label>
-              <input id="register-name" v-model.trim="form.name" type="text" class="form-control"
+              <input id="register-name" data-testid="register-name" v-model.trim="form.name" type="text" class="form-control"
                 autocomplete="name" maxlength="60" required />
             </div>
 
             <div class="mb-3">
               <label for="register-email" class="form-label fw-semibold">Email</label>
-              <input id="register-email" v-model.trim="form.email" type="email" class="form-control"
+              <input id="register-email" data-testid="register-email" v-model.trim="form.email" type="email" class="form-control"
                 autocomplete="email" required />
             </div>
 
             <div class="mb-3">
               <label for="register-password" class="form-label fw-semibold">Password</label>
-              <PasswordInput id="register-password" v-model="form.password"
+              <PasswordInput id="register-password" data-testid="register-password" v-model="form.password"
                 autocomplete="new-password" aria-describedby="register-password-rules" required />
               <PasswordChecklist id="register-password-rules" :password="form.password" />
             </div>
 
             <div class="mb-4">
               <label for="register-confirm" class="form-label fw-semibold">Confirm password</label>
-              <PasswordInput id="register-confirm" v-model="form.confirmPassword" autocomplete="new-password" required />
+              <PasswordInput id="register-confirm" data-testid="register-confirm" v-model="form.confirmPassword" autocomplete="new-password" required />
             </div>
 
-            <button type="submit" class="btn hw-btn-primary w-100" :disabled="submitting">
+            <button type="submit" class="btn hw-btn-primary w-100" data-testid="register-submit" :disabled="submitting">
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Creating account…' : 'Create account' }}
             </button>

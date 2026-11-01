@@ -245,9 +245,9 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
     <template v-else-if="centre">
       <CentrePhoto :centre="centre" size="banner" />
 
-      <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-3 mb-3">
+      <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-3 mb-3" data-testid="centre-header">
         <div class="min-w-0">
-          <h1 class="display-6 mb-2">{{ centre.name }}</h1>
+          <h1 class="display-6 mb-2" data-testid="centre-name">{{ centre.name }}</h1>
           <div class="d-flex flex-wrap gap-3 small text-secondary">
             <span>{{ centre.address }}<span v-if="centre.postalCode">, Singapore {{ centre.postalCode }}</span></span>
             <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener" class="text-reset">
@@ -268,7 +268,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
         <div class="p-3 flex-fill min-w-0">
           <dt class="small text-uppercase text-secondary">Listed here</dt>
           <!-- stalls.length changes straight away when someone adds a stall on this page -->
-          <dd class="h5 hw-mono mb-0">{{ stalls.length }}</dd>
+          <dd class="h5 hw-mono mb-0" data-testid="centre-listed-count">{{ stalls.length }}</dd>
         </div>
         <div class="p-3 flex-fill min-w-0">
           <dt class="small text-uppercase text-secondary">Live reports</dt>
@@ -283,7 +283,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
         </div>
       </dl>
 
-      <OfficialClosureAlert class="mt-3" :closures="centre.closures" />
+      <OfficialClosureAlert class="mt-3" data-testid="centre-closure-alert" :closures="centre.closures" />
 
       <div class="row g-4 mt-1">
         <!-- Main column: tabs -->
@@ -310,13 +310,13 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               <span class="small text-secondary">
                 <span class="hw-mono">{{ liveStallCount }}</span> with a live community update
               </span>
-              <button v-if="!addingStall" type="button" class="btn btn-sm btn-outline-dark" v-on:click="startAddingStall">
+              <button v-if="!addingStall" type="button" class="btn btn-sm btn-outline-dark" data-testid="add-stall-button" v-on:click="startAddingStall">
                 <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add a stall
               </button>
             </div>
 
             <StallForm v-if="addingStall" class="mb-3" :centre-id="centre._id" v-on:saved="onStallAdded" v-on:cancel="addingStall = false" />
-            <p v-if="addedMessage" class="small text-secondary" role="status">{{ addedMessage }}</p>
+            <p v-if="addedMessage" class="small text-secondary" role="status" data-testid="stall-added-message">{{ addedMessage }}</p>
 
             <template v-if="stalls.length">
               <div class="d-grid gap-2 mb-3">
@@ -378,7 +378,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
         <!-- Rail: map, report a queue, reminder -->
         <aside class="col-lg-4">
           <div class="rail d-grid gap-3">
-            <section v-if="centre.location?.coordinates" class="hw-surface overflow-hidden" aria-label="Map">
+            <section v-if="centre.location?.coordinates" class="hw-surface overflow-hidden" aria-label="Map" data-testid="centre-map">
               <CentreMap :key="centre._id" :centre="centre" />
             </section>
 
@@ -390,7 +390,7 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
               </template>
               <template v-else-if="stalls.length">
                 <label for="report-stall" class="form-label small text-secondary">Which stall?</label>
-                <select id="report-stall" v-model="reportStallId" class="form-select form-select-sm">
+                <select id="report-stall" data-testid="report-stall-select" v-model="reportStallId" class="form-select form-select-sm">
                   <option value="">Choose a stall</option>
                   <option v-for="stall in stalls" :key="stall._id" :value="stall._id">
                     {{ stall.name }}{{ stall.unitNumber ? ` (#${stall.unitNumber})` : '' }}
@@ -404,12 +404,12 @@ watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
                   v-on:submitted="onRailReported"
                   v-on:cancel="reportStallId = ''"
                 />
-                <p v-if="reportThanks" class="small text-secondary mt-2 mb-0" role="status">{{ reportThanks }}</p>
+                <p v-if="reportThanks" class="small text-secondary mt-2 mb-0" role="status" data-testid="report-thanks">{{ reportThanks }}</p>
               </template>
               <p v-else class="small text-secondary mb-0">Add a stall first to report its queue.</p>
             </section>
 
-            <section class="hw-surface p-3" aria-labelledby="reminder-heading">
+            <section class="hw-surface p-3" aria-labelledby="reminder-heading" data-testid="centre-reminder">
               <h2 id="reminder-heading" class="h6">Reminder</h2>
               <FavouriteAlertEditor v-if="centreFavourite" :favourite="centreFavourite" />
               <template v-else>

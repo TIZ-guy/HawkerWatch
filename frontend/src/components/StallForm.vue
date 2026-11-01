@@ -56,15 +56,15 @@ async function save() {
       <div class="row g-3">
         <div class="col-md-6">
           <label :for="`stall-name-${stall?._id || 'new'}`" class="form-label small fw-semibold">Stall name</label>
-          <input :id="`stall-name-${stall?._id || 'new'}`" v-model="name" type="text" class="form-control" maxlength="60" placeholder="e.g. Ah Hock Chicken Rice" required />
+          <input :id="`stall-name-${stall?._id || 'new'}`" data-testid="stall-form-name" v-model="name" type="text" class="form-control" maxlength="60" placeholder="e.g. Ah Hock Chicken Rice" required />
         </div>
         <div class="col-md-6">
           <label :for="`stall-speciality-${stall?._id || 'new'}`" class="form-label small fw-semibold">Dish <span class="fw-normal text-secondary">(optional)</span></label>
-          <input :id="`stall-speciality-${stall?._id || 'new'}`" v-model="speciality" type="text" class="form-control" maxlength="60" placeholder="e.g. Chicken rice" />
+          <input :id="`stall-speciality-${stall?._id || 'new'}`" data-testid="stall-form-speciality" v-model="speciality" type="text" class="form-control" maxlength="60" placeholder="e.g. Chicken rice" />
         </div>
         <div class="col-6 col-md-3">
           <label :for="`stall-cuisine-${stall?._id || 'new'}`" class="form-label small fw-semibold">Cuisine <span class="fw-normal text-secondary">(optional)</span></label>
-          <select :id="`stall-cuisine-${stall?._id || 'new'}`" v-model="cuisine" class="form-select">
+          <select :id="`stall-cuisine-${stall?._id || 'new'}`" data-testid="stall-form-cuisine" v-model="cuisine" class="form-select">
             <option value="">Any</option>
             <option v-for="option in CUISINES" :key="option" :value="option">{{ option }}</option>
           </select>
@@ -73,16 +73,16 @@ async function save() {
           <label :for="`stall-unit-${stall?._id || 'new'}`" class="form-label small fw-semibold">Unit no. <span class="fw-normal text-secondary">(optional)</span></label>
           <div class="input-group">
             <span class="input-group-text">#</span>
-            <input :id="`stall-unit-${stall?._id || 'new'}`" v-model="unitNumber" type="text" class="form-control" maxlength="10" placeholder="01-23" />
+            <input :id="`stall-unit-${stall?._id || 'new'}`" data-testid="stall-form-unit" v-model="unitNumber" type="text" class="form-control" maxlength="10" placeholder="01-23" />
           </div>
         </div>
       </div>
 
-      <p v-if="errorMessage" class="small text-brick mt-3 mb-0" role="alert">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="small text-brick mt-3 mb-0" role="alert" data-testid="stall-form-error">{{ errorMessage }}</p>
 
       <div class="d-flex justify-content-end gap-2 mt-3">
         <button type="button" class="btn btn-sm btn-link text-secondary" v-on:click="emit('cancel')">Cancel</button>
-        <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="saving">
+        <button type="submit" class="btn btn-sm hw-btn-primary" data-testid="stall-form-submit" :disabled="saving">
           {{ saving ? 'Saving...' : editing ? 'Save changes' : 'Add stall' }}
         </button>
       </div>
