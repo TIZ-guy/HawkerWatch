@@ -29,6 +29,9 @@ jobs:
         run: pnpm --dir frontend install --frozen-lockfile
       - name: Install backend dependencies
         run: pnpm --dir backend install --frozen-lockfile
+      # Fails the check if ESLint finds a problem (unused variable, Vue template mistake, ...)
+      - name: Lint frontend (ESLint)
+        run: pnpm --dir frontend lint
       - name: Build frontend
         run: pnpm --dir frontend build
       - name: Unit test frontend (Vitest)

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/useAuthStore.js'
+import ReminderBell from '@/components/ReminderBell.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -36,6 +37,7 @@ async function logOut() {
           <!-- Hidden until we know whether the user is logged in, so the buttons don't flicker -->
           <template v-if="auth.checked">
             <template v-if="auth.user">
+              <ReminderBell />
               <span class="navbar-text ms-lg-2 small" data-testid="nav-user-name">{{ auth.user.name }}</span>
               <button type="button" class="btn btn-outline-dark btn-sm" data-testid="nav-logout" :disabled="loggingOut" @click="logOut">
                 Log out

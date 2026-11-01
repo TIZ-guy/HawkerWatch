@@ -1,6 +1,6 @@
 <script setup>
 // Reminder settings for one favourite: on/off, days of the week and a time.
-// Only saves the preference; HawkerWatch doesn't send notifications yet.
+// Saves the preference; ReminderBell shows the reminder in the navbar when it's due.
 import { computed, ref, watch } from 'vue'
 import { useFavouriteStore } from '../stores/useFavouriteStore.js'
 import { WEEK_DAYS, formatAlert } from '../utils/alerts.js'

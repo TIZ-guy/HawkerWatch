@@ -8,12 +8,11 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import PlaceSearch from '../components/PlaceSearch.vue'
 import { cuisineOptions } from '../utils/cuisines.js'
-import { getCommunitySummary, getHawkerCentres, getStalls } from '../services/hawkerService.js'
+import { getHawkerCentres, getStalls } from '../services/hawkerService.js'
 import { currentClosure } from '../utils/closures.js'
 import { DEFAULT_DISTANCE_KM, DISTANCE_OPTIONS_KM, distanceKm, getCurrentPosition } from '../services/locationService.js'
 
 const SEARCH_DELAY_MS = 300
-const SUMMARY_CACHE_MS = 2 * 60 * 1000
 
 const QUICK_FILTERS = [
   { value: 'near', label: 'Near me', icon: 'bi-geo-alt', title: 'Centres close to you, nearest first' },

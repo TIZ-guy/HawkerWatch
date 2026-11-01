@@ -91,6 +91,20 @@ test('POST /api/favourites saves a hawker centre for the logged-in user', async 
     assert.deepEqual(create.mock.calls[0].arguments[0], { user: diner._id, targetType: 'HawkerCentre', target: CENTRE_ID });
 });
 
+test('POST /api/favourites saves a stall, with the owner taken from the login and not the request', async (t) => {
+    const headers = loginAs(t, diner);
+    t.mock.method(Stall, 'exists', async () => ({ _id: STALL_ID }));
+    const create = t.mock.method(Favourite, 'create', async (data) => ({ _id: FAVOURITE_ID, ...data }));
+    const baseUrl = await startServer(t);
+
+    const body = { targetType: 'Stall', target: STALL_ID, user: '64b7f0c2a1b2c3d4e5f60799' };
+    const response = await send(`${baseUrl}/api/favourites`, 'POST', headers, body);
+
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).data.targetType, 'Stall');
+    assert.equal(create.mock.calls[0].arguments[0].user, diner._id);
+});
+
 test('POST /api/favourites only accepts a stall that is still active', async (t) => {
     const headers = loginAs(t, diner);
     const exists = t.mock.method(Stall, 'exists', async () => null);
@@ -151,8 +165,9 @@ test('PATCH /api/favourites/:id/alert only changes the fields that were sent', a
     const update = t.mock.method(Favourite, 'findOneAndUpdate', async () => ({ _id: FAVOURITE_ID }));
     const baseUrl = await startServer(t);
 
-    await send(`${baseUrl}/api/favourites/${FAVOURITE_ID}/alert`, 'PATCH', headers, { enabled: false });
+    const response = await send(`${baseUrl}/api/favourites/${FAVOURITE_ID}/alert`, 'PATCH', headers, { enabled: false });
 
+    assert.equal(response.status, 200);
     assert.deepEqual(update.mock.calls[0].arguments[1], { $set: { 'alert.enabled': false } });
 });
 
