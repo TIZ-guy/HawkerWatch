@@ -8,6 +8,7 @@
     "dev:backend": "pnpm --dir backend dev",
     "test": "pnpm --dir backend test",
     "test:unit": "pnpm --dir frontend test:unit --run",
+    "test:e2e": "pnpm --dir frontend test:e2e",
     "build": "pnpm --dir frontend build",
     "seed": "pnpm --dir backend seed",
     "import:centres": "pnpm --dir backend import:centres",
