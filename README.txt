@@ -31,6 +31,7 @@ Contents
 ================================================================================
 
 Deployed app:  https://hawkerwatch-1ahh.onrender.com
+Backend API:   https://hawkerwatch-api.onrender.com/api   (health: /api/health)
 GitHub repo:   https://github.com/TIZ-guy/HawkerWatch   (public)
 
 The app is on free hosting. If nobody has used it for about 15 minutes, the first page
@@ -467,9 +468,19 @@ Chrome:
     3. Click the three-dot menu (the vertical dots) at the top right of DevTools, then
        More tools > Sensors.
     4. Under Location, choose "Other..." (custom location) and enter the latitude and
-       longitude of a hawker centre. For example, Maxwell Food Centre is about
-       latitude 1.2803, longitude 103.8447. For another centre, right-click it in
-       Google Maps; the first line of the menu shows its coordinates.
+       longitude of a hawker centre. For example, Maxwell Food Centre (Kim Hua Market):
+
+           Latitude:   1.280551
+           Longitude:  103.844460
+
+       To get the coordinates of any other centre, open this address in your browser
+       with part of the centre's name at the end:
+
+           https://hawkerwatch-api.onrender.com/api/hawker-centres?search=<name>
+
+       In the response, find "location": { "coordinates": [ ... ] }. The first number is
+       the LONGITUDE and the second is the LATITUDE (GeoJSON order), so swap them when
+       you type them into Sensors.
     5. Keep DevTools open, open that centre's page in HawkerWatch and send a report.
        Allow location access if the browser asks.
     6. To see the refusal, set a location far away (for example the preset "London")
@@ -513,7 +524,7 @@ themselves on every push to main.
         NODE_ENV       production
         MONGO_URI      the Atlas connection string
         JWT_SECRET     a long random string (made as in section 2, step 5)
-        FRONTEND_URL   the frontend's address, e.g. https://hawkerwatch-1ahh.onrender.com
+        FRONTEND_URL   the frontend's address, here https://hawkerwatch-1ahh.onrender.com
                        (no / at the end)
 
     Render sets PORT by itself. NODE_ENV=production hides server error details, makes the
@@ -537,7 +548,7 @@ themselves on every push to main.
     Environment variable:
 
         VITE_API_URL   the backend's address followed by /api,
-                       e.g. https://your-backend.onrender.com/api
+                       here https://hawkerwatch-api.onrender.com/api
 
     Redirects/Rewrites (needed so that reloading a page like /map works):
 

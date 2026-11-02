@@ -1,6 +1,6 @@
 # HawkerWatch
 
-HawkerWatch is a local-development MVP for Singapore diners who want to check a hawker centre before travelling. It combines official NEA closure information with clearly labelled, time-stamped community updates about stalls and queues.
+HawkerWatch is a deployed web app for Singapore diners who want to check a hawker centre before travelling. It combines official NEA closure information with clearly labelled, time-stamped community updates about stalls and queues.
 
 Live app: https://hawkerwatch-1ahh.onrender.com
 
@@ -94,7 +94,7 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 
 After `pnpm seed` and `pnpm dev`, open http://localhost:5173.
 
-- **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 2 km of your location; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Food options** chips (cuisines). Filters can be combined.
+- **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 1, 5 or 10 km of your location, 5 km by default, nearest first; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Food options** chips (cuisines). Filters can be combined.
 - **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, Food options chips, and an expandable list of recent updates with a **Flag** button for wrong reports.
 - Clicking a stall in the home page search results opens its centre page and highlights that stall.
 - **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first, and **Distance from you** (All, 1 km, 5 km, 10 km) shows only centres inside that radius.
@@ -177,7 +177,7 @@ All responses use `{ success: true, data: ... }` or `{ success: false, message: 
 
 ## Data sources and attribution
 
-Planned official closure data source: [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view). Planned location service: [OneMap / Singapore Land Authority](https://www.onemap.gov.sg/apidocs/).
+Official closure data source: [data.gov.sg / NEA](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view). Location service: [OneMap / Singapore Land Authority](https://www.onemap.gov.sg/apidocs/).
 
 Live stall status and queue estimates are community submitted, time-stamped, may expire, and are not official or guaranteed.
 
