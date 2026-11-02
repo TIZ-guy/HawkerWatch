@@ -1,6 +1,6 @@
 // OpenAPI description of the HawkerWatch API, shown as an interactive page at /api/docs.
 // When you add or change a route, update it here too: tests/openapi.test.js fails if a route is missing.
-import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS, COMMENT_MAX_LENGTH, CUISINE_VALUES, SPECIALITY_MAX_LENGTH } from '../utils/constants.js'
+import { STATUS_VALUES, REPORT_TTL_MINUTES, DUPLICATE_WINDOW_MINUTES, FOOD_UPDATE_VALUES, FOOD_UPDATE_NOTE_MAX_LENGTH, REVIEW_TEXT_MAX_LENGTH, REPORT_MAX_DISTANCE_METRES, MAX_REVIEW_PHOTOS, COMMENT_MAX_LENGTH, CUISINE_VALUES, SPECIALITY_MAX_LENGTH } from '../utils/constants.js'
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../utils/passwordRules.js'
 
 const id = (name, description) => ({ name, in: 'path', required: true, description, schema: { type: 'string', example: '64b7f0c2a1b2c3d4e5f60718' } })
@@ -42,6 +42,7 @@ export default {
     { name: 'Hawker centres', description: 'Centres with official NEA closures, their stalls and community summaries.' },
     { name: 'Stalls', description: 'No official stall list exists, so stalls are added by logged-in users. The person who added a stall, or an admin, can edit it; admins can remove it.' },
     { name: 'Reports', description: `Community status reports. Each expires after ${REPORT_TTL_MINUTES} minutes.` },
+    { name: 'Food updates', description: 'What the food is like at a stall today (sold out, some items sold out, quality not great). Each lasts until the end of the day in Singapore time.' },
     { name: 'Favourites', description: 'Saved stalls and centres, with optional reminder preferences.' },
     { name: 'Reviews', description: 'Star ratings (1 to 5) with an optional written review. One review per user per stall; authors can edit and delete their own, admins can delete any.' }
 ,
@@ -142,6 +143,19 @@ export default {
           stall: { type: 'string' },
           hawkerCentre: { type: 'string' },
           status: { type: 'string', enum: STATUS_VALUES },
+          createdAt: { type: 'string', format: 'date-time' },
+          expiresAt: { type: 'string', format: 'date-time' },
+          flagCount: { type: 'integer', example: 0 }
+        }
+      },
+      FoodUpdate: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          stall: { type: 'string' },
+          hawkerCentre: { type: 'string' },
+          type: { type: 'string', enum: FOOD_UPDATE_VALUES },
+          note: { type: 'string', nullable: true, example: 'Only plain rice left' },
           createdAt: { type: 'string', format: 'date-time' },
           expiresAt: { type: 'string', format: 'date-time' },
           flagCount: { type: 'integer', example: 0 }
@@ -504,6 +518,51 @@ export default {
           400: error('Invalid id, your own report, or already expired'),
           401: notLoggedIn,
           404: error('Report not found'),
+          409: error('Already flagged by you')
+        }
+      }
+    },
+
+    '/api/food-updates': {
+      get: {
+        tags: ['Food updates'],
+        summary: 'Live food updates for a stall or centre',
+        description: 'Give stallId or hawkerCentreId. Newest first. Expired and hidden updates are left out.',
+        parameters: [query('stallId', 'Stall id'), query('hawkerCentreId', 'Centre id')],
+        responses: {
+          200: ok('Food updates', { type: 'object', properties: { foodUpdates: { type: 'array', items: ref('FoodUpdate') } } }),
+          400: error('Neither id given, or an invalid id')
+        }
+      },
+      post: {
+        tags: ['Food updates'],
+        summary: "Say what the food is like at a stall today",
+        description: `Same rules as status reports: one update per user per stall every ${DUPLICATE_WINDOW_MINUTES} minutes, 10 per IP per 15 minutes, and the reporter must be within ${REPORT_MAX_DISTANCE_METRES} m of the hawker centre (send lat and lng; used for the check only, never stored). The optional note can be at most ${FOOD_UPDATE_NOTE_MAX_LENGTH} characters.`,
+        ...loginRequired,
+        requestBody: { required: true, ...json({ type: 'object', required: ['stallId', 'type'], properties: { stallId: { type: 'string' }, type: { type: 'string', enum: FOOD_UPDATE_VALUES }, note: { type: 'string', maxLength: FOOD_UPDATE_NOTE_MAX_LENGTH }, lat: { type: 'number' }, lng: { type: 'number' } } }, { stallId: '64b7f0c2a1b2c3d4e5f60719', type: 'SOME_SOLD_OUT', note: 'No more fish balls', lat: 1.3521, lng: 103.8198 }) },
+        responses: {
+          201: ok('Food update saved', { type: 'object', properties: { foodUpdate: ref('FoodUpdate') } }),
+          400: error('Invalid stallId, type or note, or no location sent'),
+          401: notLoggedIn,
+          403: error(`More than ${REPORT_MAX_DISTANCE_METRES} m from the hawker centre`),
+          404: error('Stall not found'),
+          409: error(`Already updated this stall in the last ${DUPLICATE_WINDOW_MINUTES} minutes`),
+          429: error('Too many updates')
+        }
+      }
+    },
+    '/api/food-updates/{id}/flag': {
+      post: {
+        tags: ['Food updates'],
+        summary: 'Flag a food update as wrong',
+        description: 'An update flagged by 3 different users is hidden.',
+        ...loginRequired,
+        parameters: [id('id', 'Food update id')],
+        responses: {
+          200: ok('Flag counted', { type: 'object', example: { flagCount: 1, hidden: false } }),
+          400: error('Invalid id, your own update, or already expired'),
+          401: notLoggedIn,
+          404: error('Food update not found'),
           409: error('Already flagged by you')
         }
       }

@@ -7,6 +7,7 @@ import hawkerCentreRoutes from '../routes/hawkerCentreRoutes.js'
 import stallRoutes from '../routes/stallRoutes.js'
 import favouriteRoutes from '../routes/favouriteRoutes.js'
 import reportRoutes from '../routes/reportRoutes.js'
+import foodUpdateRoutes from '../routes/foodUpdateRoutes.js'
 import reviewRoutes from '../routes/reviewRoutes.js'
 import reviewPhotoRoutes from '../routes/reviewPhotoRoutes.js'
 import commentRoutes from '../routes/commentRoutes.js'
@@ -20,6 +21,7 @@ const MOUNTED = {
   '/api/stalls': stallRoutes,
   '/api/favourites': favouriteRoutes,
   '/api/reports': reportRoutes,
+  '/api/food-updates': foodUpdateRoutes,
   '/api/reviews': reviewRoutes,
   '/api/review-photos': reviewPhotoRoutes,
   '/api/comments': commentRoutes,

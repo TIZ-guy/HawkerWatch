@@ -9,6 +9,7 @@ import hawkerCentreRoutes from './routes/hawkerCentreRoutes.js'
 import stallRoutes from './routes/stallRoutes.js'
 import favouriteRoutes from './routes/favouriteRoutes.js'
 import reportRoutes from './routes/reportRoutes.js'
+import foodUpdateRoutes from './routes/foodUpdateRoutes.js'
 import reviewRoutes from './routes/reviewRoutes.js'
 import reviewPhotoRoutes from './routes/reviewPhotoRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
@@ -39,6 +40,7 @@ app.use('/api/hawker-centres', hawkerCentreRoutes)
 app.use('/api/stalls', stallRoutes)
 app.use('/api/favourites', favouriteRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/food-updates', foodUpdateRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/review-photos', reviewPhotoRoutes)
 app.use('/api/admin', adminRoutes)
