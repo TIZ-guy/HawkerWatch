@@ -74,7 +74,7 @@ async function submit() {
 </script>
 
 <template>
-  <form class="report-form border-top mt-3 pt-3" @submit.prevent="submit">
+  <form class="report-form border-top mt-3 pt-3" data-testid="report-form" @submit.prevent="submit">
     <fieldset>
       <legend class="small fw-semibold mb-2">What's it like at {{ stall.name }} right now?</legend>
       <div class="d-flex flex-wrap gap-2">
@@ -87,7 +87,7 @@ async function submit() {
             :name="`report-${stall._id}`"
             :value="value"
           />
-          <label class="hw-chip" :for="`report-${stall._id}-${value}`">
+          <label class="hw-chip" :data-testid="`report-status-${value}`" :for="`report-${stall._id}-${value}`">
             <i class="bi me-1" :class="STATUS_DISPLAY[value].icon" aria-hidden="true"></i>{{ STATUS_DISPLAY[value].label }}
           </label>
         </template>
@@ -102,9 +102,9 @@ async function submit() {
         You need to be at the hawker centre (within {{ settings?.maxDistanceMetres ?? 200 }} m); your location is only used for this check.
       </template>
     </p>
-    <p v-if="errorMessage" class="small text-brick mb-2" role="alert">{{ errorMessage }}</p>
+    <p v-if="errorMessage" class="small text-brick mb-2" role="alert" data-testid="report-error">{{ errorMessage }}</p>
     <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-sm hw-btn-primary" :disabled="step !== ''">
+      <button type="submit" class="btn btn-sm hw-btn-primary" data-testid="report-submit" :disabled="step !== ''">
         <span v-if="step" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
         {{ step === 'locating' ? 'Checking your location...' : step === 'sending' ? 'Sending...' : 'Submit update' }}
       </button>

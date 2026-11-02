@@ -8,12 +8,11 @@ import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import PlaceSearch from '../components/PlaceSearch.vue'
 import { cuisineOptions } from '../utils/cuisines.js'
-import { getCommunitySummary, getHawkerCentres, getStalls } from '../services/hawkerService.js'
+import { getHawkerCentres, getStalls } from '../services/hawkerService.js'
 import { currentClosure } from '../utils/closures.js'
 import { DEFAULT_DISTANCE_KM, DISTANCE_OPTIONS_KM, distanceKm, getCurrentPosition } from '../services/locationService.js'
 
 const SEARCH_DELAY_MS = 300
-const SUMMARY_CACHE_MS = 2 * 60 * 1000
 
 const QUICK_FILTERS = [
   { value: 'near', label: 'Near me', icon: 'bi-geo-alt', title: 'Centres close to you, nearest first' },
@@ -160,8 +159,8 @@ onMounted(() => {
     <div class="row g-3 align-items-end">
       <div class="col-lg-7">
         <div class="d-flex gap-2 align-items-end">
-          <SearchBar v-model="search" class="flex-grow-1 min-w-0" label="Centre, stall or dish" placeholder="e.g. Maxwell, laksa, Tian Tian" />
-          <button type="button" class="btn hw-btn-primary" @click="searchNow">Search</button>
+          <SearchBar v-model="search" data-testid="home-search" class="flex-grow-1 min-w-0" label="Centre, stall or dish" placeholder="e.g. Maxwell, laksa, Tian Tian" />
+          <button type="button" class="btn hw-btn-primary" data-testid="home-search-button" @click="searchNow">Search</button>
         </div>
       </div>
       <div class="col-lg-5">
@@ -172,10 +171,10 @@ onMounted(() => {
 
     <!-- Filters, directly on the page -->
     <div class="d-grid gap-2 mt-3">
-      <FilterChips v-model="quickFilters" :options="QUICK_FILTERS" multiple label="Quick filters" />
+      <FilterChips v-model="quickFilters" data-testid="home-quick-filters" :options="QUICK_FILTERS" multiple label="Quick filters" />
       <div class="d-flex flex-wrap align-items-center gap-2">
         <span class="hw-label">Cuisine</span>
-        <FilterChips v-model="cuisine" :options="cuisineOptions" label="Cuisine" small />
+        <FilterChips v-model="cuisine" data-testid="home-cuisine-filters" :options="cuisineOptions" label="Cuisine" small />
       </div>
       <div v-if="nearMe || searchedPlace" class="d-flex flex-wrap align-items-center gap-2">
         <span class="hw-label">Within</span>
@@ -197,7 +196,7 @@ onMounted(() => {
       <section class="mt-4" aria-labelledby="centres-heading">
         <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 border-bottom pb-2 mb-3">
           <h2 id="centres-heading" class="h5 mb-0">
-            <span class="hw-mono">{{ centres.length }}</span> centre{{ centres.length === 1 ? '' : 's' }}{{ hasFilters ? ' match' : '' }}
+            <span class="hw-mono" data-testid="home-centre-count">{{ centres.length }}</span> centre{{ centres.length === 1 ? '' : 's' }}{{ hasFilters ? ' match' : '' }}
           </h2>
           <span class="text-secondary small">
             <template v-if="origin">Nearest first, within {{ nearDistanceKm }} km{{ searchedPlace ? ` of ${searchedPlace.label}` : '' }}</template>
@@ -213,7 +212,7 @@ onMounted(() => {
             :distance-km="origin ? distanceKm(origin, centre.location) : null"
           />
         </div>
-        <div v-else class="hw-surface p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div v-else class="hw-surface p-3 d-flex flex-wrap align-items-center justify-content-between gap-2" data-testid="home-no-results">
           <span>No hawker centres match{{ hasFilters ? ' your search and filters' : '' }}.</span>
           <button v-if="hasFilters" type="button" class="btn btn-sm btn-outline-dark" @click="clearFilters">
             Clear filters
@@ -221,7 +220,7 @@ onMounted(() => {
         </div>
       </section>
 
-      <section v-if="showStalls" class="mt-5" aria-labelledby="stalls-heading">
+      <section v-if="showStalls" class="mt-5" aria-labelledby="stalls-heading" data-testid="home-stall-results">
         <div class="border-bottom pb-2 mb-3">
           <h2 id="stalls-heading" class="h5 mb-0">
             <span class="hw-mono">{{ stalls.length }}</span> stall{{ stalls.length === 1 ? '' : 's' }}

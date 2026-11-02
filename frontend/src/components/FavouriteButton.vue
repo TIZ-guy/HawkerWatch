@@ -43,6 +43,7 @@ async function onClick() {
     <button
       type="button"
       class="btn btn-sm fav-btn"
+      data-testid="favourite-button"
       :class="withLabel ? '' : 'rounded-circle icon-only'"
       :aria-pressed="saved"
       :aria-label="label"

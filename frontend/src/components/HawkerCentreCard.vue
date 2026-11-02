@@ -28,13 +28,13 @@ const live = computed(() => props.centre.live || null)
 </script>
 
 <template>
-  <article class="hw-surface hw-surface-hover p-3 position-relative d-grid gap-3 centre-row">
+  <article class="hw-surface hw-surface-hover p-3 position-relative d-grid gap-3 centre-row" data-testid="centre-card">
     <CentrePhoto :centre="centre" />
     <div class="min-w-0 d-flex flex-column">
       <div class="d-flex justify-content-between align-items-start gap-2">
         <div class="min-w-0">
           <h3 class="h6 mb-1">
-            <RouterLink class="stretched-link text-reset text-decoration-none" :to="`/hawker-centres/${centre._id}`">
+            <RouterLink class="stretched-link text-reset text-decoration-none" data-testid="centre-card-link" :to="`/hawker-centres/${centre._id}`">
               {{ centre.name }}
             </RouterLink>
           </h3>

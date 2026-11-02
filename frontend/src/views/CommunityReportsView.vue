@@ -160,7 +160,7 @@ onBeforeUnmount(() => clearInterval(timer))
         Be the first: choose <strong>Report a stall</strong>.
       </div>
       <ul v-else class="list-unstyled d-grid gap-3 mb-0">
-        <li v-for="report in reports" :key="report.id" class="hw-surface p-3 d-flex flex-wrap align-items-center gap-3">
+        <li v-for="report in reports" :key="report.id" class="hw-surface p-3 d-flex flex-wrap align-items-center gap-3" data-testid="report-feed-item">
           <StatusBadge :status="report.status" />
           <div class="flex-grow-1 min-w-0">
             <RouterLink

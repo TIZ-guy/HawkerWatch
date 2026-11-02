@@ -31,6 +31,7 @@ defineProps({
           v-for="stall in stalls"
           :id="`stall-${stall._id}`"
           :key="stall._id"
+          data-testid="stall-row"
           :class="{ 'row-highlight': stall._id === highlightedId }"
         >
           <td class="hw-mono small text-nowrap">{{ stall.unitNumber ? `#${stall.unitNumber}` : '–' }}</td>
