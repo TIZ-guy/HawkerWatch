@@ -13,6 +13,10 @@ export const ROLES = ['user', 'admin']
 export const REPORT_TTL_MINUTES = 60
 export const DUPLICATE_WINDOW_MINUTES = 15
 
+// Food updates: what the food is like at a stall today. They last until the end of the day (Singapore time).
+export const FOOD_UPDATE_VALUES = ['SOLD_OUT', 'SOME_SOLD_OUT', 'QUALITY_NOT_GREAT']
+export const FOOD_UPDATE_NOTE_MAX_LENGTH = 140
+
 export const COMMENT_MAX_LENGTH = 500
 export const REVIEW_TEXT_MAX_LENGTH = 500
 export const MAX_REVIEW_PHOTOS = 4
