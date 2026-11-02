@@ -2,7 +2,7 @@
 
 HawkerWatch is a deployed web app for Singapore diners who want to check a hawker centre before travelling. It combines official NEA closure information with clearly labelled, time-stamped community updates about stalls and queues.
 
-Live app: https://hawkerwatch-1ahh.onrender.com
+Live app: https://hawkerwatch-1ahh.onrender.com · API docs: https://hawkerwatch-api.onrender.com/api/docs (free hosting, so the first load after a quiet spell can take about a minute)
 
 For full setup, testing and deployment instructions (and the test account), see `README.txt`.
 
@@ -32,9 +32,10 @@ flowchart LR
 | Authentication (register, log in, log out, current user, change name and password) | Done |
 | Account security: password rules with live checklist, show/hide password, Caps Lock warning, failed-login limit, unique emails and names | Done |
 | Discovery frontend: home page, centre detail page (with a OneMap map of the centre) and stall page | Done |
-| Light-theme UI (see `docs/ui-rebuild.md`): design tokens in `frontend/src/style.css`, list rows on Discover, a stall table with tabs and a map rail on centre pages, queue status as the only colour | Done |
+| Light-theme UI (see `docs/ui-rebuild.md`): design tokens in `frontend/src/style.css`, Bootstrap card grids for centres, stalls and community reports, a stall table with tabs and a map rail on centre pages, queue status as the only colour | Done |
 | Live stall count: how many stalls are listed at each centre, on centre cards and the centre page | Done |
-| Favourites: API, page, heart buttons, reminder preferences | Done (due reminders show in the navbar bell; no email or push) |
+| Favourites: API, page, heart buttons, reminder preferences | Done |
+| Reminders: the navbar bell lists every favourite whose reminder is due | Done (shown in the app; no email or push) |
 | Profile page | Done |
 | Explore Map (OneMap basemap) | Done |
 | Community reports: submit from stall cards or the Community reports page, 60-minute expiry, 15-minute duplicate rule, rate limit | Done |
@@ -51,6 +52,9 @@ flowchart LR
 | Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
 | Review photos: up to 4 per review (shrunk in the browser, stored in MongoDB); a self-scrolling slideshow on the stall page links each photo to its review | Done |
 | Two-factor login (optional): authenticator-app codes, turned on and off from the Profile page | Done |
+| Food updates: sold out, some items sold out or quality not great, with an optional note; live until midnight, flaggable | Done |
+| Confidence label: how much to trust a stall's community status, from the number and agreement of live reports | Done |
+| Automated tests: Vitest unit tests, API tests and Playwright end-to-end tests, all run in GitHub Actions CI (see `README.txt`) | Done |
 | Deployment (Render: Static Site + Web Service, MongoDB Atlas) | Done |
 
 ## Prerequisites
@@ -84,6 +88,7 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `pnpm lint`: lint the frontend with ESLint
 - `pnpm test:e2e`: run the Playwright end-to-end tests (first time: `pnpm --dir frontend exec playwright install chromium`). They only use the `hawker-watch-e2e` database and need `MONGO_URI` and `JWT_SECRET` in `backend/.env`
 - `pnpm seed`: replace the database contents with the real NEA centres and closures (needs internet), the stalls in `backend/data/stalls.json`, and demo activity: live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, favourites, 3 centre comments, a demo login, and a demo login with two-factor login on. The demo activity is only on sample stalls (made-up businesses), mostly at Aljunied Ave 2 Blk 117 and Cheng San Market (Ang Mo Kio Ave 10 Blk 527). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `pnpm seed:demo`: top up the demo activity before a presentation, **without deleting anything**: fresh live reports and today's food updates on the sample stalls, the 6 sample reviews (skipped if already there), and the two demo logins if they are missing. Reports expire after 60 minutes, so run it within the hour before. To fill the shared database the deployed site uses, in PowerShell: `$env:MONGO_DB_NAME='hawker-watch'; pnpm seed:demo; Remove-Item Env:MONGO_DB_NAME`
 - `pnpm import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
 - `pnpm import:stalls`: import the stalls in `backend/data/stalls.json`, matched to centres by NEA serial number (run `pnpm import:centres` first). Safe to run again: stalls are updated, not duplicated, and stalls added by users are left alone. Refuses to run in production, because most of the file is sample data
 - `pnpm migrate:cuisines`: one-off fix for databases from before cuisine became a category: moves the old dish name into `speciality` and sets `cuisine` (defaults to Chinese). Run it once if `pnpm seed` would wipe data you want to keep
@@ -92,15 +97,15 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 
 After `pnpm seed` and `pnpm dev`, open http://localhost:5173.
 
-- **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 1, 5 or 10 km of your location, 5 km by default, nearest first; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Food options** chips (cuisines). Filters can be combined.
-- **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, Food options chips, and an expandable list of recent updates with a **Flag** button for wrong reports.
+- **Home page (`/`)**: search finds both hawker centres (by name or address) and stalls (by name). Filter with **Near me** (centres within 1, 5 or 10 km of your location, 5 km by default, nearest first; the browser asks for permission), **Open today** (no official closure today), **Has live updates** (a community report in the last 60 minutes), and the **Cuisine** chips. Filters can be combined.
+- **Centre page (`/hawker-centres/:id`)**: official NEA closures and the community summary are shown in separate, labelled panels. Below them is the centre's stall list with each stall's live status, a search box, Cuisine chips, and an expandable list of recent updates with a **Flag** button for wrong reports.
 - Clicking a stall in the home page search results opens its centre page and highlights that stall.
 - **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first, and **Distance from you** (All, 1 km, 5 km, 10 km) shows only centres inside that radius.
 - **Community reports (`/reports`)**: the newest live reports across all centres, filterable by status, plus **Report a stall** (choose a centre, a stall and a status). Reports need you to be within 200 m of the centre; your location is only used for that check. For testing or the demo away from a centre, put `REPORT_LOCATION_CHECK=off` in `backend/.env` and the form shows "Location check off (testing)".
 - **Favourites (`/favourites`, login required)**: the heart on any centre or stall saves it. The page shows saved centres and stalls with their closures, live status and reminder.
 - **Profile (`/profile`, login required)**: account details, change name, change password, and reminder days and time for each favourite. Due reminders show in the navbar bell while the app is open; no email or push notifications are sent.
 
-To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. The other seeded users can't log in. Accounts you register yourself last until the next `pnpm seed`.
+To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. **demo2fa@example.com** (same password) has two-factor login on: add the key `HAWKERWATCHDEMO2` to an authenticator app to get its codes. The other seeded users can't log in. Accounts you register yourself last until the next `pnpm seed`.
 
 With the seed data, Aljunied Ave 2 Blk 117 has stalls with live reports and reviews with photos (open Hock Lam Chicken Rice for the photo slideshow), and closures come from the real NEA dates.
 
@@ -110,7 +115,7 @@ With the seed data, Aljunied Ave 2 Blk 117 has stalls with live reports and revi
 frontend/src/
   views/        HomeView, HawkerCentreView, ExploreMapView, CommunityReportsView, FavouritesView, ProfileView, LoginView, RegisterView
   components/   SearchBar, FilterChips, HawkerCentreCard, StallCard, StatusBadge, ClosureBadge,
-                OfficialClosureAlert, CommunityUpdateCard, FavouriteButton, FavouriteAlertEditor,
+                OfficialClosureAlert, FavouriteButton, FavouriteAlertEditor,
                 LoadingState, ErrorState
   services/     apiClient (shared Axios settings and error helper), hawkerService, authService, favouriteService, reportService, reviewService, commentService, locationService
   stores/       Pinia setup stores: useAuthStore, useFavouriteStore
@@ -181,6 +186,8 @@ Live stall status and queue estimates are community submitted, time-stamped, may
 
 ## Deployment notes
 
-The live app runs on Render: `frontend` as a Static Site and `backend` as a Web Service, with the environment variables from `backend/.env.example` (see `README.txt` for the exact settings). `frontend/vercel.json` is an unused alternative for Vercel. Use MongoDB Atlas for hosted persistence. Never commit `.env` files or production credentials.
+The live app runs on Render: `frontend` as a Static Site and `backend` as a Web Service, with the environment variables from `backend/.env.example` (see `README.txt` for the exact settings). Use MongoDB Atlas for hosted persistence. Never commit `.env` files or production credentials.
+
+Community reports expire after 60 minutes, so before a demo run `pnpm seed:demo` against the shared database (see Commands) to add fresh live reports, food updates and sample reviews without deleting anything.
 
 Official hawker centre data comes from NEA's [Dates of Hawker Centres Closure](https://data.gov.sg/datasets/d_bda4baa634dd1cc7a6c7cad5f19e2d68/view) dataset on data.gov.sg, which needs no API key. Admins can refresh it with `POST /api/admin/import-centres`. No production secret is included in this repository.

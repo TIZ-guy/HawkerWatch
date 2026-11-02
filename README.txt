@@ -216,6 +216,13 @@ Step 7: Create an account
     Start the app (section 3), open http://localhost:5173, click Log in, then Create an
     account. The deployed test account in section 1 does not exist in your local database.
 
+    Optional: pnpm seed:demo adds fresh live reports, today's food updates and the
+    sample reviews without deleting anything, plus two logins if they are missing:
+    demo@example.com and demo2fa@example.com, both with password Hawker#Run1. The
+    second has two-factor login on: in an authenticator app, choose Enter a setup key
+    and enter HAWKERWATCHDEMO2. Reports expire after 60 minutes, so run it shortly
+    before trying the app.
+
 
 ================================================================================
 3. HOW TO RUN
@@ -553,9 +560,6 @@ themselves on every push to main.
     Redirects/Rewrites (needed so that reloading a page like /map works):
 
         Source: /*     Destination: /index.html     Action: Rewrite
-
-    frontend/vercel.json is an alternative config for hosting the frontend on Vercel.
-    The live site does not use it.
 
 
 ================================================================================

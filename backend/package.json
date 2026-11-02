@@ -8,6 +8,7 @@
     "start": "node server.js",
     "test": "node --test",
     "seed": "node scripts/seedMockData.js",
+    "seed:demo": "node scripts/seedDemo.js",
     "import:centres": "node scripts/importHawkerClosures.js",
     "import:stalls": "node scripts/importStalls.js",
     "migrate:cuisines": "node scripts/migrateCuisines.js"
