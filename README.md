@@ -53,8 +53,6 @@ flowchart LR
 | Two-factor login (optional): authenticator-app codes, turned on and off from the Profile page | Done |
 | Deployment (Render: Static Site + Web Service, MongoDB Atlas) | Done |
 
-The app is designed for desktop browsers. Layouts also adapt to small screens, but phone support is not tested and is outside the current scope.
-
 ## Prerequisites
 
 Install Node.js 22 or newer (CI uses Node 22) and **pnpm**, the package manager this project uses: run `npm install -g pnpm` once. Each `package.json` names the pnpm version (`packageManager`), and pnpm switches to it automatically. You also need a MongoDB database: the team's MongoDB Atlas cluster, or MongoDB running on your own computer.

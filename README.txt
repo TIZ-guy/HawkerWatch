@@ -571,8 +571,6 @@ themselves on every push to main.
 - The frontend and backend are on two different onrender.com sites, so the login cookie
   is a third-party cookie. Normal Chrome and Firefox windows work. Safari, or private /
   Incognito windows that block third-party cookies, may not keep you logged in.
-- The app is designed for desktop browsers. Layouts adapt to small screens, but we did
-  not test on phones.
 
 
 ================================================================================
