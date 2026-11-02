@@ -5,19 +5,27 @@
 // When the stall data includes liveReport (centre page, favourites) it shows the newest
 // live community report, can list recent ones, and lets logged-in users report the status.
 // Stall search results don't include liveReport.
+// It also shows how confident the community status is (ConfidenceLabel): straight away on the stall page,
+// and when the recent updates are opened elsewhere.
+// It also shows today's food updates (sold out and so on): straight away on the stall page,
+// and on tap everywhere else, so a page full of cards doesn't make a request for each one.
 // Emits reported(report) after the user submits an update, so the page can refresh totals,
 // and changed() when a flag hides a report, so the page can reload the stall statuses.
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StatusBadge from './StatusBadge.vue'
+import ConfidenceLabel from './ConfidenceLabel.vue'
 import FavouriteButton from './FavouriteButton.vue'
 import ReportStatusForm from './ReportStatusForm.vue'
+import FoodUpdateForm from './FoodUpdateForm.vue'
 import StarRating from './StarRating.vue'
 import { getStallReports } from '../services/hawkerService.js'
-import { flagReport } from '../services/reportService.js'
+import { flagReport, getStallSummary } from '../services/reportService.js'
+import { getFoodUpdates, flagFoodUpdate } from '../services/foodUpdateService.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { timeAgo, timeUntil } from '../utils/time.js'
 import { statusDisplay } from '../utils/status.js'
+import { foodUpdateDisplay } from '../utils/foodUpdates.js'
 
 const props = defineProps({
   // From /stalls (hawkerCentre populated) or /hawker-centres/:id/stalls (liveReport included)
@@ -39,6 +47,17 @@ const hasLiveData = computed(() => 'liveReport' in props.stall)
 const submittedReport = ref(null)
 const liveReport = computed(() => submittedReport.value || props.stall.liveReport)
 
+// How much to trust the status: { level, confidence, reportCount }, or null with no live reports.
+const summary = ref(null)
+
+async function loadSummary() {
+  try {
+    summary.value = await getStallSummary(props.stall._id)
+  } catch {
+    summary.value = null // the status badge still shows; the label just stays out
+  }
+}
+
 const reports = ref(null)
 const reportsOpen = ref(false)
 const reportsLoading = ref(false)
@@ -59,6 +78,7 @@ async function loadReports() {
 function toggleReports() {
   reportsOpen.value = !reportsOpen.value
   if (reportsOpen.value && !reports.value) loadReports()
+  if (reportsOpen.value && !summary.value) loadSummary()
 }
 
 const reporting = ref(false)
@@ -100,7 +120,7 @@ async function confirmFlag(reportId) {
     if (result.hidden) {
       flagMessage.value = 'Thanks. Enough people flagged that update, so it is now hidden.'
       emit('changed')
-      await loadReports()
+      await Promise.all([loadReports(), loadSummary()])
     } else {
       flagMessage.value = 'Thanks. That update has been flagged as wrong.'
     }
@@ -114,12 +134,88 @@ async function confirmFlag(reportId) {
   }
 }
 
+// Food updates: what the food is like today (sold out, some items sold out, quality not great)
+const foodUpdates = ref(null) // null until loaded
+const foodOpen = ref(false)
+const foodLoading = ref(false)
+const foodError = ref('')
+const addingFood = ref(false)
+const foodThanks = ref('')
+const submittedFoodId = ref('')
+const flaggedFoodIds = ref([])
+const confirmingFoodId = ref('')
+const flaggingFoodId = ref('')
+const foodFlagError = ref({ id: '', message: '' })
+
+async function loadFoodUpdates() {
+  foodLoading.value = true
+  foodError.value = ''
+  try {
+    foodUpdates.value = await getFoodUpdates(props.stall._id)
+  } catch (error) {
+    foodError.value = error.message
+  } finally {
+    foodLoading.value = false
+  }
+}
+
+function toggleFood() {
+  foodOpen.value = !foodOpen.value
+  if (foodOpen.value && !foodUpdates.value) loadFoodUpdates()
+}
+
+function startFoodUpdate() {
+  foodThanks.value = ''
+  if (!auth.user) return goToLogin()
+  addingFood.value = true
+}
+
+function onFoodSubmitted(update) {
+  addingFood.value = false
+  submittedFoodId.value = String(update.id)
+  foodThanks.value = 'Thanks! Your food update is live until the end of the day.'
+  foodOpen.value = true
+  loadFoodUpdates()
+}
+
+function startFoodFlag(id) {
+  foodFlagError.value = { id: '', message: '' }
+  if (!auth.user) return goToLogin()
+  confirmingFoodId.value = id
+}
+
+async function confirmFoodFlag(id) {
+  flaggingFoodId.value = id
+  try {
+    const result = await flagFoodUpdate(id)
+    flaggedFoodIds.value = [...flaggedFoodIds.value, id]
+    if (result.hidden) await loadFoodUpdates()
+  } catch (error) {
+    // 409: you flagged it before, so just show it as flagged
+    if (error.status === 409) flaggedFoodIds.value = [...flaggedFoodIds.value, id]
+    else foodFlagError.value = { id, message: error.message }
+  } finally {
+    flaggingFoodId.value = ''
+    confirmingFoodId.value = ''
+  }
+}
+
+// The stall page has room to show today's food updates straight away
+onMounted(() => {
+  if (props.statusOnly && hasLiveData.value) {
+    if (props.stall.liveReport) loadSummary()
+    foodOpen.value = true
+    loadFoodUpdates()
+  }
+})
+
 function onReported(report) {
   reporting.value = false
   submittedReport.value = report
   thanks.value = 'Thanks! Your update is live for the next 60 minutes.'
   if (reportsOpen.value) loadReports()
   else reports.value = null // fetched fresh next time the list opens
+  if (summary.value || props.statusOnly) loadSummary()
   emit('reported', report)
 }
 </script>
@@ -164,6 +260,7 @@ function onReported(report) {
           · expires {{ timeUntil(liveReport.expiresAt) }}
         </p>
         <p v-else class="small text-secondary mt-2 mb-0">No live community updates.</p>
+        <p v-if="liveReport && summary" class="mt-1 mb-0"><ConfidenceLabel :summary="summary" /></p>
 
         <div class="d-flex flex-wrap gap-3 mt-1">
           <button
@@ -184,7 +281,70 @@ function onReported(report) {
           >
             <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Report status
           </button>
+          <button
+            type="button"
+            class="btn btn-link btn-sm p-0 text-decoration-none"
+            :aria-expanded="foodOpen"
+            @click="toggleFood"
+          >
+            {{ foodOpen ? 'Hide' : 'Show' }} food updates
+            <i class="bi" :class="foodOpen ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
+          </button>
+          <button
+            v-if="!addingFood"
+            type="button"
+            class="btn btn-link btn-sm p-0 text-decoration-none text-brick"
+            @click="startFoodUpdate"
+          >
+            <i class="bi bi-egg-fried me-1" aria-hidden="true"></i>Food update
+          </button>
         </div>
+
+        <p v-if="foodThanks" class="small text-secondary mt-2 mb-0" role="status">{{ foodThanks }}</p>
+
+        <div v-if="foodOpen" class="mt-2">
+          <p v-if="foodLoading && !foodUpdates" class="small text-secondary mb-0">Loading food updates...</p>
+          <p v-else-if="foodError" class="small text-brick mb-0">{{ foodError }}</p>
+          <template v-else-if="foodUpdates">
+            <p v-if="!foodUpdates.length" class="small text-secondary mb-0">No food updates today.</p>
+            <ul class="list-unstyled small mb-0">
+              <li v-for="update in foodUpdates" :key="update.id" class="d-flex flex-wrap align-items-center gap-2 py-1 border-top">
+                <span class="fw-semibold">
+                  <i class="bi me-1" :class="foodUpdateDisplay(update.type).icon" aria-hidden="true"></i>{{ foodUpdateDisplay(update.type).label }}
+                </span>
+                <span class="text-secondary">{{ timeAgo(update.createdAt) }}</span>
+
+                <span class="ms-auto">
+                  <span v-if="flaggedFoodIds.includes(update.id)" class="text-secondary">
+                    <i class="bi bi-flag-fill me-1" aria-hidden="true"></i>Flagged
+                  </span>
+                  <span v-else-if="submittedFoodId === String(update.id)" class="text-secondary">Your update</span>
+                  <span v-else-if="confirmingFoodId === update.id" class="d-inline-flex align-items-center gap-2">
+                    <span>Flag as wrong?</span>
+                    <button type="button" class="btn btn-sm btn-outline-dark py-0" :disabled="flaggingFoodId === update.id" @click="confirmFoodFlag(update.id)">
+                      {{ flaggingFoodId === update.id ? 'Flagging...' : 'Yes' }}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-link text-secondary p-0" @click="confirmingFoodId = ''">Cancel</button>
+                  </span>
+                  <button
+                    v-else
+                    type="button"
+                    class="btn btn-link btn-sm p-0 text-secondary text-decoration-none"
+                    :aria-label="`Flag this ${foodUpdateDisplay(update.type).label.toLowerCase()} update as wrong`"
+                    @click="startFoodFlag(update.id)"
+                  >
+                    <i class="bi bi-flag me-1" aria-hidden="true"></i>Flag
+                  </button>
+                </span>
+
+                <span v-if="update.note" class="w-100 text-secondary">{{ update.note }}</span>
+                <span v-if="foodFlagError.id === update.id" class="w-100 text-brick" role="alert">{{ foodFlagError.message }}</span>
+              </li>
+            </ul>
+          </template>
+        </div>
+
+        <FoodUpdateForm v-if="addingFood" :stall="stall" :centre="centre" @submitted="onFoodSubmitted" @cancel="addingFood = false" />
 
         <p v-if="thanks" class="small text-secondary mt-2 mb-0" role="status">{{ thanks }}</p>
 

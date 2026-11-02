@@ -14,6 +14,18 @@ export async function submitReport(stallId, status, position) {
   }
 }
 
+// A stall's current status and how much to trust it, from the live reports (GET /api/reports?stallId=).
+// Returns { status, confidence (0-100), level ('high', 'medium' or 'low'), reportCount, lastReportedAt },
+// or null when the stall has no live reports.
+export async function getStallSummary(stallId) {
+  try {
+    const response = await axios.get(`${API_URL}/reports`, { params: { stallId } })
+    return response.data.data.summary
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 // { locationCheck, maxDistanceMetres }. Asked once per page load.
 let settingsRequest = null
 export function getReportSettings() {

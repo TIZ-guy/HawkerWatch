@@ -16,3 +16,15 @@ const UNKNOWN_STATUS = { label: 'Unknown', qClass: 'hw-q-shut', pillClass: 'hw-p
 export function statusDisplay(status) {
   return STATUS_DISPLAY[status] || UNKNOWN_STATUS
 }
+
+// How confident we are in a stall's status (the level from calculateConfidence in backend/utils/reportUtils.js).
+// pillClass reuses the status colours: green for high, amber for medium, red for low.
+export const CONFIDENCE_DISPLAY = {
+  high: { label: 'High confidence', icon: 'bi-shield-check', pillClass: 'hw-pill-open' },
+  medium: { label: 'Medium confidence', icon: 'bi-shield', pillClass: 'hw-pill-mod' },
+  low: { label: 'Low confidence', icon: 'bi-shield-exclamation', pillClass: 'hw-pill-long' }
+}
+
+export function confidenceDisplay(level) {
+  return CONFIDENCE_DISPLAY[level] || CONFIDENCE_DISPLAY.low
+}
