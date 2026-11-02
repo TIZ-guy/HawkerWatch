@@ -159,24 +159,42 @@ onBeforeUnmount(() => clearInterval(timer))
         No live {{ statusFilter ? STATUS_DISPLAY[statusFilter].label.toLowerCase() : '' }} reports right now.
         Be the first: choose <strong>Report a stall</strong>.
       </div>
-      <ul v-else class="list-unstyled d-grid gap-3 mb-0">
-        <li v-for="report in reports" :key="report.id" class="hw-surface p-3 d-flex flex-wrap align-items-center gap-3" data-testid="report-feed-item">
-          <StatusBadge :status="report.status" />
-          <div class="flex-grow-1 min-w-0">
-            <RouterLink
-              class="fw-semibold text-reset text-decoration-none"
-              :to="`/hawker-centres/${report.hawkerCentre._id}#stall-${report.stall._id}`"
-            >
-              {{ report.stall.name }}<span v-if="report.stall.unitNumber" class="hw-mono text-secondary fw-normal small"> #{{ report.stall.unitNumber }}</span>
-            </RouterLink>
-            <div class="small text-secondary">{{ report.hawkerCentre.name }}</div>
-          </div>
-          <div class="small text-secondary text-end hw-mono">
-            {{ timeAgo(report.createdAt, now) }}
-            <div>expires {{ timeUntil(report.expiresAt, now) }}</div>
-          </div>
+      <ul v-else class="row g-4 list-unstyled mb-0">
+        <li v-for="report in reports" :key="report.id" class="col-sm-6 col-lg-4">
+          <article class="card border-0 shadow-sm h-100 report-card" data-testid="report-feed-item">
+            <div class="card-body p-4 d-flex flex-column">
+              <div class="mb-3"><StatusBadge :status="report.status" /></div>
+              <h3 class="h6 mb-1">
+                <RouterLink
+                  class="stretched-link text-reset text-decoration-none"
+                  :to="`/hawker-centres/${report.hawkerCentre._id}#stall-${report.stall._id}`"
+                >
+                  {{ report.stall.name }}<span v-if="report.stall.unitNumber" class="text-secondary fw-normal small"> #{{ report.stall.unitNumber }}</span>
+                </RouterLink>
+              </h3>
+              <p class="small text-secondary mb-0">
+                <i class="bi bi-shop me-1" aria-hidden="true"></i>{{ report.hawkerCentre.name }}
+              </p>
+              <p class="small text-secondary mt-auto pt-3 mb-0">
+                <i class="bi bi-clock me-1" aria-hidden="true"></i>{{ timeAgo(report.createdAt, now) }} · expires {{ timeUntil(report.expiresAt, now) }}
+              </p>
+            </div>
+          </article>
         </li>
       </ul>
     </section>
   </main>
 </template>
+
+<style scoped>
+/* Same hover lift as HawkerCentreCard, since the whole card links to the stall */
+.report-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.report-card:hover,
+.report-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+</style>

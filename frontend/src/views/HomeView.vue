@@ -204,13 +204,10 @@ onMounted(() => {
           </span>
         </div>
 
-        <div v-if="centres.length" class="d-grid gap-3">
-          <HawkerCentreCard
-            v-for="centre in centres"
-            :key="centre._id"
-            :centre="centre"
-            :distance-km="origin ? distanceKm(origin, centre.location) : null"
-          />
+        <div v-if="centres.length" class="row g-4">
+          <div v-for="centre in centres" :key="centre._id" class="col-sm-6 col-lg-4">
+            <HawkerCentreCard :centre="centre" :distance-km="origin ? distanceKm(origin, centre.location) : null" />
+          </div>
         </div>
         <div v-else class="hw-surface p-3 d-flex flex-wrap align-items-center justify-content-between gap-2" data-testid="home-no-results">
           <span>No hawker centres match{{ hasFilters ? ' your search and filters' : '' }}.</span>
@@ -226,8 +223,8 @@ onMounted(() => {
             <span class="hw-mono">{{ stalls.length }}</span> stall{{ stalls.length === 1 ? '' : 's' }}
           </h2>
         </div>
-        <div v-if="stalls.length" class="row g-3">
-          <div v-for="stall in stalls" :key="stall._id" class="col-md-6">
+        <div v-if="stalls.length" class="row g-4">
+          <div v-for="stall in stalls" :key="stall._id" class="col-sm-6 col-lg-4">
             <StallCard :stall="stall" show-centre />
           </div>
         </div>

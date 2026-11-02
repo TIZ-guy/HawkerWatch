@@ -221,8 +221,8 @@ function onReported(report) {
 </script>
 
 <template>
-  <article class="hw-surface h-100">
-    <div class="p-3 p-lg-4">
+  <article class="card border-0 shadow-sm h-100">
+    <div class="card-body p-3 p-lg-4">
       <div v-if="!statusOnly" class="d-flex justify-content-between align-items-start gap-2">
         <div>
           <h3 class="h6 mb-1">

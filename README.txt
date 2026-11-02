@@ -10,9 +10,14 @@ It combines official NEA closure dates with live, community-reported stall queue
 1. LINKS
 ================================================================================
 
-Deployed app:  <TO BE ADDED>
+Deployed app:  https://hawkerwatch-1ahh.onrender.com
+API:           https://hawkerwatch-api.onrender.com/api
+API docs:      https://hawkerwatch-api.onrender.com/api/docs   (interactive Swagger UI)
 GitHub repo:   https://github.com/TIZ-guy/HawkerWatch
-               (private; instructors must be added as collaborators)
+
+Both the app and the API are hosted on Render's free tier, which sleeps after
+about 15 minutes without visitors. The first page load after that can take up
+to a minute while the API wakes up; after that it is fast.
 
 
 ================================================================================
@@ -93,6 +98,10 @@ Step 5: Load the data
     WARNING: pnpm seed deletes everything in the database named by MONGO_DB_NAME,
     including all accounts. Only use it on your own empty database.
 
+    Optional: pnpm seed:demo adds fresh live reports, today's food updates, the
+    sample reviews and the test accounts in section 6, without deleting anything.
+    Reports expire after 60 minutes, so run it shortly before trying the app.
+
 
 ================================================================================
 4. HOW TO RUN
@@ -111,12 +120,12 @@ This starts the frontend and backend together. Then open:
 5. TESTING
 ================================================================================
 
-There are 311 automated tests in three suites.
+There are 358 automated tests in three suites.
 
     Suite                  Tool                  Files   Tests   Needs MongoDB?
     ---------------------  --------------------  -----   -----   --------------
-    Unit (frontend)        Vitest, jsdom            11      95   No
-    API / integration      node:test                20     193   No
+    Unit (frontend)        Vitest, jsdom            14     115   No
+    API / integration      node:test                22     220   No
     End-to-end (E2E)       Playwright, Chromium      7      23   Yes
 
 5.1 Commands (run from the repo root)
@@ -195,6 +204,7 @@ There are 311 automated tests in three suites.
     e2eGuard.test.js               1   Guard accepts only the E2E database
     errorMiddleware.test.js        3   Shared error responses
     favourites.test.js            15   Favourites list, add, reminder, delete
+    foodUpdates.test.js           11   Food updates: submit, list, flag
     geocode.test.js                4   Postal code and place search
     hawkerApi.test.js             12   Centre and stall API
     hawkerImport.test.js           9   NEA data import
@@ -204,21 +214,25 @@ There are 311 automated tests in three suites.
     models.test.js                10   Database schema rules
     openapi.test.js                2   API docs match the real routes
     passwordRules.test.js          5   Password rules
+    reportEndpoints.test.js       16   Report submit, feed, summary and flags
     reportLocation.test.js         6   200 m report location check
     reportUtils.test.js           11   Report expiry and flags
     reviews.test.js               35   Reviews and review photos
     stalls.test.js                19   Adding, editing and removing stalls
     twoFactor.test.js             10   Two-factor login
     -------------------------  -----
-    Total                        193
+    Total                        220
 
 5.4 Unit tests (frontend/src/**/__tests__/)
 
     File                       Tests   What it covers
     -------------------------  -----   -----------------------------------------
+    ConfidenceLabel.spec.js        8   How much to trust a stall's status
     FilterChips.spec.js            8   Filter chip selection
+    FoodUpdateForm.spec.js         6   Food update form
     PlaceSearch.spec.js            4   Postal code search box
     ReminderBell.spec.js           3   Navbar reminder bell
+    ReportStatusForm.spec.js       6   Report status form
     StatusBadge.spec.js            7   Queue status badge
     locationService.spec.js       13   Distance and browser location
     useFavouriteStore.spec.js      9   Favourites store
@@ -228,7 +242,7 @@ There are 311 automated tests in three suites.
     reminders.spec.js              5   Working out which reminders are due
     time.spec.js                  12   Time formatting
     -------------------------  -----
-    Total                         95
+    Total                        115
 
 5.5 How the tests are designed
 
@@ -278,7 +292,24 @@ There are 311 automated tests in three suites.
 6. TEST ACCOUNTS
 ================================================================================
 
-<TO BE ADDED>
+These work on the deployed app, and locally after pnpm seed or pnpm seed:demo.
+
+    Email                  Password       Notes
+    ---------------------  -------------  -------------------------------------
+    demo@example.com       Hawker#Run1    Normal user, starts with two favourites
+                                          after pnpm seed
+    demo2fa@example.com    Hawker#Run1    Two-factor login is on. In an
+                                          authenticator app (e.g. Google
+                                          Authenticator), choose + > Enter a
+                                          setup key and enter HAWKERWATCHDEMO2,
+                                          then type the 6-digit code it shows
+
+You can also register your own account. The demo activity (live reports, food
+updates, reviews with photos) is on Aljunied Ave 2 Blk 117 and Cheng San Market
+(Ang Mo Kio Ave 10 Blk 527).
+
+Reports normally need you to be within 200 m of the hawker centre. The deployed
+app has this check turned off, so reports can be tried from anywhere.
 
 
 ================================================================================

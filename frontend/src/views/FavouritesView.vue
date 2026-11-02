@@ -67,21 +67,23 @@ onMounted(load)
     <template v-else>
       <section v-if="centreFavourites.some((item) => item.target)" class="mb-5" aria-labelledby="fav-centres">
         <h2 id="fav-centres" class="h5 border-bottom pb-2 mb-3">Hawker centres</h2>
-        <div class="d-grid gap-3">
+        <div class="row g-4">
           <template v-for="favourite in centreFavourites" :key="favourite._id">
-            <HawkerCentreCard v-if="favourite.target" :centre="favourite.target">
-              <p class="small text-secondary border-top pt-2 mb-0 position-relative z-2" data-testid="favourite-reminder">
-                <i class="bi bi-bell me-1" aria-hidden="true"></i>{{ formatAlert(favourite.alert) || 'No reminder set' }}
-                · <RouterLink to="/profile#alerts">Edit</RouterLink>
-              </p>
-            </HawkerCentreCard>
+            <div v-if="favourite.target" class="col-md-6 col-xl-4">
+              <HawkerCentreCard :centre="favourite.target">
+                <p class="small text-secondary border-top pt-3 mt-3 mb-0 position-relative z-2" data-testid="favourite-reminder">
+                  <i class="bi bi-bell me-1" aria-hidden="true"></i>{{ formatAlert(favourite.alert) || 'No reminder set' }}
+                  · <RouterLink to="/profile#alerts">Edit</RouterLink>
+                </p>
+              </HawkerCentreCard>
+            </div>
           </template>
         </div>
       </section>
 
       <section v-if="stallFavourites.some((item) => item.target)" class="mb-5" aria-labelledby="fav-stalls">
         <h2 id="fav-stalls" class="h5 border-bottom pb-2 mb-3">Stalls</h2>
-        <div class="row g-3">
+        <div class="row g-4">
           <template v-for="favourite in stallFavourites" :key="favourite._id">
             <div v-if="favourite.target" class="col-md-6 col-xl-4">
               <StallCard :stall="stallDetails[favourite.target._id] || favourite.target" show-centre>
