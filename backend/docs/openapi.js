@@ -126,12 +126,13 @@ export default {
         type: 'object',
         properties: {
           _id: { type: 'string' },
-          hawkerCentre: { description: 'Centre id, or { _id, name, address } on /api/stalls endpoints', oneOf: [{ type: 'string' }, { type: 'object' }] },
+          hawkerCentre: { description: 'Centre id, or { _id, name, address, location } on GET /api/stalls', oneOf: [{ type: 'string' }, { type: 'object' }] },
           name: { type: 'string', example: 'Ah Demo Chicken Rice' },
           unitNumber: { type: 'string', example: '01-01' },
           cuisine: { type: 'string', enum: CUISINE_VALUES, example: 'Chinese' },
           speciality: { type: 'string', maxLength: SPECIALITY_MAX_LENGTH, example: 'Chicken rice', description: 'The dish the stall is known for' },
           isActive: { type: 'boolean' },
+          pendingApproval: { type: 'boolean', description: 'true while a stall added by a user waits for an admin to approve it' },
           addedBy: { type: 'string', description: 'Id of the user who added the stall' },
           liveReport: ref('LiveReport'),
           rating: ref('Rating')
@@ -523,6 +524,22 @@ export default {
         responses: { 200: ok('Settings', { type: 'object', example: { locationCheck: true, maxDistanceMetres: REPORT_MAX_DISTANCE_METRES } }) }
       }
     },
+    '/api/reports/{id}': {
+      delete: {
+        tags: ['Reports'],
+        summary: 'Delete a report (admins only)',
+        description: 'Deletes the report for good, e.g. spam or an abusive report.',
+        ...loginRequired,
+        parameters: [id('id', 'Report id')],
+        responses: {
+          200: ok('Deleted', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60720' } }),
+          400: error('Invalid id'),
+          401: notLoggedIn,
+          403: error('Not an admin'),
+          404: error('Report not found')
+        }
+      }
+    },
     '/api/reports/{id}/flag': {
       post: {
         tags: ['Reports'],
@@ -731,6 +748,78 @@ export default {
           401: notLoggedIn,
           403: error('Not an admin'),
           502: error('data.gov.sg could not be reached')
+        }
+      }
+    },
+
+    '/api/admin/overview': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Counts for the admin page (admins only)',
+        ...loginRequired,
+        responses: {
+          200: ok('Counts', { type: 'object', example: { pendingStalls: 2, listedStalls: 340, removedStalls: 3, users: 58, liveReports: 12, flaggedReports: 1 } }),
+          401: notLoggedIn,
+          403: error('Not an admin')
+        }
+      }
+    },
+    '/api/admin/stalls': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Stalls waiting for approval, listed, or removed (admins only)',
+        description: 'Newest first, up to 100. Each stall includes hawkerCentre { _id, name } and addedBy { _id, name, email }.',
+        ...loginRequired,
+        parameters: [
+          query('status', 'Which stalls (default pending)', { type: 'string', enum: ['pending', 'listed', 'removed'] }),
+          query('search', 'Part of the stall name or dish')
+        ],
+        responses: {
+          200: ok('Stalls', { type: 'array', items: ref('Stall') }),
+          400: error('Unknown status'),
+          401: notLoggedIn,
+          403: error('Not an admin')
+        }
+      }
+    },
+    '/api/admin/stalls/{id}/approve': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Approve a stall a user added, so everyone can see it (admins only)',
+        ...loginRequired,
+        parameters: [id('id', 'Stall id')],
+        responses: { 200: ok('Approved', ref('Stall')), 401: notLoggedIn, 403: error('Not an admin'), 404: error('No stall waiting for approval with that id') }
+      }
+    },
+    '/api/admin/stalls/{id}/reject': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Reject a stall a user added; it is deleted (admins only)',
+        ...loginRequired,
+        parameters: [id('id', 'Stall id')],
+        responses: { 200: ok('Rejected', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60719' } }), 401: notLoggedIn, 403: error('Not an admin'), 404: error('No stall waiting for approval with that id') }
+      }
+    },
+    '/api/admin/stalls/{id}/restore': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Bring back a removed stall, with its reviews (admins only)',
+        ...loginRequired,
+        parameters: [id('id', 'Stall id')],
+        responses: { 200: ok('Restored', ref('Stall')), 401: notLoggedIn, 403: error('Not an admin'), 404: error('No removed stall with that id'), 409: error('Another stall at the centre has that name now') }
+      }
+    },
+    '/api/admin/reports': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Newest community reports, with who sent them (admins only)',
+        description: 'Up to 100, expired ones included. Each report has user { _id, name, email }, flagCount, live and hidden.',
+        ...loginRequired,
+        parameters: [query('flagged', 'true for only reports flagged at least once', { type: 'string', enum: ['true'] })],
+        responses: {
+          200: ok('Reports', { type: 'object', properties: { reports: { type: 'array', items: { type: 'object' } }, hideThreshold: { type: 'integer', example: 3 } } }),
+          401: notLoggedIn,
+          403: error('Not an admin')
         }
       }
     },

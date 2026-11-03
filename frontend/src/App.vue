@@ -33,6 +33,7 @@ async function logOut() {
           <RouterLink class="nav-link" to="/reports">Reports</RouterLink>
           <RouterLink class="nav-link" to="/favourites">Saved</RouterLink>
           <RouterLink class="nav-link" to="/profile">Profile</RouterLink>
+          <RouterLink v-if="auth.isAdmin" class="nav-link" data-testid="nav-admin" to="/admin">Admin</RouterLink>
 
           <!-- Hidden until we know whether the user is logged in, so the buttons don't flicker -->
           <template v-if="auth.checked">

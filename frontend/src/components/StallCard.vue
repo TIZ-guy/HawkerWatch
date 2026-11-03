@@ -1,6 +1,7 @@
 <script setup>
 // One stall. The name links to the stall's own page (/stalls/:id), and its star rating is shown
 // when the stall data includes one. With showCentre it links to the stall's centre (home search, favourites).
+// With distanceKm it shows how far away the centre is, next to the centre link (home search).
 // With statusOnly it shows only the live status part (used on the stall page, which shows the name itself).
 // When the stall data includes liveReport (centre page, favourites) it shows the newest
 // live community report, can list recent ones, and lets logged-in users report the status.
@@ -24,6 +25,7 @@ import { flagReport, getStallSummary } from '../services/reportService.js'
 import { getFoodUpdates, flagFoodUpdate } from '../services/foodUpdateService.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { timeAgo, timeUntil } from '../utils/time.js'
+import { formatDistance } from '../services/locationService.js'
 import { statusDisplay } from '../utils/status.js'
 import { foodUpdateDisplay } from '../utils/foodUpdates.js'
 
@@ -33,7 +35,9 @@ const props = defineProps({
   showCentre: { type: Boolean, default: false },
   statusOnly: { type: Boolean, default: false },
   // { name, location } of the stall's centre, passed on to the report form for its distance check
-  centre: { type: Object, default: null }
+  centre: { type: Object, default: null },
+  // How far the stall's centre is, in km (shown with showCentre)
+  distanceKm: { type: Number, default: null }
 })
 const emit = defineEmits(['reported', 'changed'])
 
@@ -252,6 +256,9 @@ function onReported(report) {
       >
         <i class="bi bi-shop me-1" aria-hidden="true"></i>{{ stall.hawkerCentre.name }}
       </RouterLink>
+      <span v-if="!statusOnly && showCentre && distanceKm != null" class="small text-secondary ms-1" data-testid="stall-distance">
+        · {{ formatDistance(distanceKm) }}
+      </span>
 
       <template v-if="hasLiveData">
         <StatusBadge v-if="statusOnly && liveReport" :status="liveReport.status" />

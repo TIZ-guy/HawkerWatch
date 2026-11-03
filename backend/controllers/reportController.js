@@ -178,3 +178,15 @@ export async function flagReport(req, res) {
     data: { flagCount: updated.flaggedBy.length, hidden: isHidden(updated) }
   })
 }
+
+// DELETE /api/reports/:id
+// Admins only (checked in reportRoutes.js). Deletes the report for good, e.g. one that is spam or abusive.
+export async function deleteReport(req, res) {
+  const { id } = req.params
+  if (!isObjectId(id)) return fail(res, 400, 'Invalid report id')
+
+  const report = await StatusReport.findByIdAndDelete(id)
+  if (!report) return fail(res, 404, 'Report not found')
+
+  res.json({ success: true, data: { id: report._id } })
+}

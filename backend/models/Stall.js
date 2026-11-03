@@ -9,6 +9,9 @@ const stallSchema = new mongoose.Schema(
     cuisine: { type: String, trim: true, enum: CUISINE_VALUES }, // a category, e.g. "Chinese"; optional
     speciality: { type: String, trim: true }, // the dish, e.g. "Chicken rice"
     isActive: { type: Boolean, default: true }, // false once an admin removes the stall
+    // true while a stall added by a user waits for an admin to approve it. Pending stalls are hidden
+    // everywhere except the admin page. Stalls from before approvals existed have no value, so count as approved.
+    pendingApproval: { type: Boolean, default: false },
     // Who added the stall (stalls are added by users, as no official stall list exists).
     // They can edit its details; admins can edit or remove any stall.
     addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }

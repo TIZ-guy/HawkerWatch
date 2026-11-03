@@ -4,6 +4,7 @@ import Review from '../models/Review.js';
 import { FLAG_HIDE_THRESHOLD } from './reportUtils.js';
 import { CUISINE_VALUES } from './constants.js';
 import { currentReviewFilter } from './reviewUtils.js';
+import { LISTED_STALL } from './stallUtils.js';
 
 // Small helpers shared by the hawker-centre and stall controllers.
 
@@ -73,7 +74,7 @@ export function ratingFor(ratings, stallId) {
 // Returns an object of centreId -> count. Centres with no stalls are left out (use stallCountFor).
 export async function getStallCounts(centreIds) {
     const groups = await Stall.aggregate([
-        { $match: { hawkerCentre: { $in: centreIds }, isActive: true } },
+        { $match: { hawkerCentre: { $in: centreIds }, ...LISTED_STALL } },
         { $group: { _id: '$hawkerCentre', count: { $sum: 1 } } }
     ]);
 
@@ -94,7 +95,7 @@ export function stallCountFor(counts, centreId) {
 // cuisines follows the order of CUISINE_VALUES, e.g. ['Chinese', 'Malay', 'Drinks'].
 export async function getCentreStallInfo(centreIds) {
     const groups = await Stall.aggregate([
-        { $match: { hawkerCentre: { $in: centreIds }, isActive: true } },
+        { $match: { hawkerCentre: { $in: centreIds }, ...LISTED_STALL } },
         { $group: { _id: '$hawkerCentre', count: { $sum: 1 }, cuisines: { $addToSet: '$cuisine' } } }
     ]);
 

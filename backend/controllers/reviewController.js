@@ -5,6 +5,7 @@ import Stall from '../models/Stall.js';
 import { REVIEW_TEXT_MAX_LENGTH, MAX_REVIEW_PHOTOS } from '../utils/constants.js';
 import { detectImageType } from '../utils/photoUtils.js';
 import { currentReviewFilter, expiredReviewFilter, reviewExpiresAt } from '../utils/reviewUtils.js';
+import { LISTED_STALL } from '../utils/stallUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -73,7 +74,7 @@ export const getCentreReviews = async (req, res, next) => {
             return;
         }
 
-        const stalls = await Stall.find({ hawkerCentre: id, isActive: true }).select('name').lean();
+        const stalls = await Stall.find({ hawkerCentre: id, ...LISTED_STALL }).select('name').lean();
         const stallNames = {};
         for (const stall of stalls) {
             stallNames[String(stall._id)] = stall.name;
@@ -161,7 +162,7 @@ export const addReview = async (req, res, next) => {
             return;
         }
 
-        if (!await Stall.exists({ _id: id, isActive: true })) {
+        if (!await Stall.exists({ _id: id, ...LISTED_STALL })) {
             res.status(404).json({ success: false, message: 'Stall not found.' });
             return;
         }

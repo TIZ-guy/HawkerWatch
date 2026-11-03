@@ -131,9 +131,14 @@ function startAddingStall() {
   addingStall.value = true
 }
 
-// Show the new stall in the list straight away, sorted by name like the rest
+// Show the new stall in the list straight away, sorted by name like the rest.
+// A stall added by a user waits for an admin to approve it, so it isn't shown yet.
 function onStallAdded(stall) {
   addingStall.value = false
+  if (stall.pendingApproval) {
+    addedMessage.value = `Thanks! ${stall.name} has been sent to an admin and will show here once it's approved.`
+    return
+  }
   stalls.value = [...stalls.value, stall].sort((a, b) => a.name.localeCompare(b.name))
   stallSearch.value = ''
   cuisine.value = ''

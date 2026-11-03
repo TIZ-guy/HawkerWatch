@@ -1,7 +1,7 @@
 import Stall from '../models/Stall.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import { contains, getLiveReports, getRatings, ratingFor } from '../utils/hawkerUtils.js';
-import { checkStallDetails, exactly } from '../utils/stallUtils.js';
+import { checkStallDetails, exactly, LISTED_STALL } from '../utils/stallUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -10,12 +10,13 @@ import { checkStallDetails, exactly } from '../utils/stallUtils.js';
 // ============================================================
 // GET /api/stalls
 // Optional query: search (stall name or dish), cuisine (exact category, e.g. "Chinese")
-// Each stall has its star rating as rating: { average, count }.
+// Each stall has its star rating as rating: { average, count }, and its centre as
+// hawkerCentre: { _id, name, address, location } (the home page sorts stalls by distance).
 // ============================================================
 
 export const getStalls = async (req, res, next) => {
     try {
-        const filter = { isActive: true };
+        const filter = { ...LISTED_STALL };
 
         if (req.query.search) {
             filter.$or = [{ name: contains(req.query.search) }, { speciality: contains(req.query.search) }];
@@ -27,7 +28,7 @@ export const getStalls = async (req, res, next) => {
 
         const stalls = await Stall
             .find(filter)
-            .populate('hawkerCentre', 'name address')
+            .populate('hawkerCentre', 'name address location')
             .sort({ name: 1 })
             .lean();
 
@@ -59,7 +60,7 @@ export const getStallById = async (req, res, next) => {
             .populate('hawkerCentre', 'name address postalCode location closures')
             .lean();
 
-        if (!stall || stall.isActive === false) { // removed stalls are hidden
+        if (!stall || stall.isActive === false || stall.pendingApproval) { // removed and unapproved stalls are hidden
             res.status(404).json({ success: false, message: 'Stall not found.' });
             return;
         }
@@ -108,6 +109,8 @@ export const getStallReports = async (req, res, next) => {
 // ============================================================
 // POST /api/hawker-centres/:id/stalls
 // Login required. Adds a stall to a centre (no official stall list exists, so users add them).
+// A stall added by a user waits for an admin to approve it (pendingApproval: true) before anyone sees it.
+// A stall added by an admin is listed straight away.
 // Body: { name, cuisine (optional category, e.g. "Chinese"), speciality (optional dish), unitNumber (optional, e.g. "01-23") }
 // ============================================================
 
@@ -132,7 +135,12 @@ export const addStall = async (req, res, next) => {
             return;
         }
 
-        const stall = await Stall.create({ ...details, hawkerCentre: centreId, addedBy: req.user._id });
+        const stall = await Stall.create({
+            ...details,
+            hawkerCentre: centreId,
+            addedBy: req.user._id,
+            pendingApproval: req.user.role !== 'admin'
+        });
 
         res.status(201).json({
             success: true,
@@ -197,6 +205,7 @@ export const updateStall = async (req, res, next) => {
 // DELETE /api/stalls/:id
 // Admins only (checked in stallRoutes.js). Hides the stall everywhere instead of deleting it,
 // so its reviews and reports stay in the database. Its unit number is freed for a new stall.
+// An admin can bring it back from the admin page (POST /api/admin/stalls/:id/restore).
 // ============================================================
 
 export const removeStall = async (req, res, next) => {

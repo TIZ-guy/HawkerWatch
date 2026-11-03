@@ -1,6 +1,7 @@
 import HawkerCentre from '../models/HawkerCentre.js';
 import Stall from '../models/Stall.js';
 import { STATUS_VALUES, REPORT_TTL_MINUTES } from '../utils/constants.js';
+import { LISTED_STALL } from '../utils/stallUtils.js';
 import { contains, getLiveReports, latestReportPerStall, getRatings, ratingFor, getStallCounts, stallCountFor, getCentreStallInfo, getCentreLiveInfo } from '../utils/hawkerUtils.js';
 
 // Every response is { success: true, data } or { success: false, message }.
@@ -108,7 +109,7 @@ export const getHawkerCentreStalls = async (req, res, next) => {
             return;
         }
 
-        const filter = { hawkerCentre: id, isActive: true };
+        const filter = { hawkerCentre: id, ...LISTED_STALL };
 
         if (req.query.search) {
             filter.$or = [{ name: contains(req.query.search) }, { speciality: contains(req.query.search) }];

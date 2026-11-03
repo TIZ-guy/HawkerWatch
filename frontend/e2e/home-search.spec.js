@@ -1,6 +1,6 @@
 // Journey 2: a diner searches and filters hawker centres on the home page.
 import { test, expect } from './support/helpers.js'
-import { ALPHA, BETA, BETA_STALL, CENTRES, GAMMA } from '../../backend/scripts/e2eFixtures.js'
+import { ALPHA, BETA, BETA_STALL, CENTRES, GAMMA, REPORTED_STALL } from '../../backend/scripts/e2eFixtures.js'
 
 test.describe('Journey 2: search and filter hawker centres', () => {
   const cards = (page) => page.getByTestId('centre-card')
@@ -82,6 +82,32 @@ test.describe('Journey 2: search and filter hawker centres', () => {
     await test.step('Only the centre with a Thai stall is left', async () => {
       await expect(cards(page)).toHaveCount(1)
       await expect(cards(page)).toContainText(GAMMA.name)
+    })
+  })
+})
+
+// Stall results are sorted by distance from the diner, with Playwright's geolocation standing in for the phone's.
+test.describe('Journey 2b: stall results nearest first', () => {
+  test.use({ permissions: ['geolocation'], geolocation: { latitude: BETA.lat, longitude: BETA.lng } })
+
+  test('stalls at the closest centre come first, and A to Z sorts by name', async ({ page }) => {
+    const stallCards = page.getByTestId('home-stall-results').getByRole('article')
+
+    await test.step('Search for something every centre sells', async () => {
+      await page.goto('/')
+      await page.getByTestId('home-search').getByRole('searchbox').fill('a')
+      await page.getByTestId('home-search-button').click()
+    })
+
+    await test.step('The stall at Beta Market, where the diner is, comes first with its distance', async () => {
+      await expect(stallCards.first()).toContainText(BETA_STALL.name)
+      await expect(stallCards.first().getByTestId('stall-distance')).toContainText('0 m')
+      await expect(page.getByTestId('home-stall-results')).toContainText('Nearest first, from your location')
+    })
+
+    await test.step('A to Z puts the stalls in name order', async () => {
+      await page.getByTestId('home-stall-sort').getByRole('button', { name: 'A to Z' }).click()
+      await expect(stallCards.first()).toContainText(REPORTED_STALL.name)
     })
   })
 })

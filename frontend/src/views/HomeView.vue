@@ -22,6 +22,11 @@ const QUICK_FILTERS = [
 
 const NEAR_DISTANCE_CHOICES = DISTANCE_OPTIONS_KM.map((km) => ({ value: String(km), label: `${km} km` }))
 
+const STALL_SORTS = [
+  { value: 'distance', label: 'Nearest', icon: 'bi-geo-alt', title: 'Stalls at the closest centres first' },
+  { value: 'name', label: 'A to Z' }
+]
+
 const search = ref('')
 const debouncedSearch = ref('')
 const quickFilters = ref([])
@@ -50,6 +55,42 @@ const liveOnly = computed(() => quickFilters.value.includes('live'))
 const findingLocation = computed(() => nearMe.value && !location.value && !locationError.value)
 const showStalls = computed(() => Boolean(debouncedSearch.value || cuisine.value))
 const hasFilters = computed(() => Boolean(search.value || quickFilters.value.length || cuisine.value || searchedPlace.value))
+
+// Stall results are sorted nearest first by default. Without Near me or a searched place, the user's
+// location is asked for just to sort them, so it doesn't limit the centres the way Near me does.
+const stallSort = ref('distance')
+watch(stallSort, (value, previous) => { if (!value) stallSort.value = previous }) // clicking the chosen sort again keeps it
+const sortLocation = ref(null)
+const sortLocationError = ref('')
+const findingSortLocation = ref(false)
+const stallOrigin = computed(() => origin.value || sortLocation.value)
+
+async function locateForSort() {
+  if (stallOrigin.value || findingSortLocation.value) return
+  findingSortLocation.value = true
+  sortLocationError.value = ''
+  try {
+    sortLocation.value = await getCurrentPosition()
+  } catch (error) {
+    sortLocationError.value = `${error.message} Stalls are sorted A to Z instead.`
+    stallSort.value = 'name'
+  } finally {
+    findingSortLocation.value = false
+  }
+}
+
+watch([showStalls, stallSort], ([shown, sort]) => {
+  if (shown && sort === 'distance') locateForSort()
+}, { immediate: true })
+
+// Each stall with its centre's distance (km, or null when unknown), in the chosen order.
+// Stalls at centres without a location go last.
+const stallResults = computed(() => {
+  const from = stallOrigin.value
+  const results = stalls.value.map((stall) => ({ stall, km: from ? distanceKm(from, stall.hawkerCentre?.location) : null }))
+  if (stallSort.value === 'distance' && from) results.sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity))
+  return results
+})
 
 // Typing only searches once the user pauses, instead of on every key.
 let searchTimer
@@ -218,14 +259,27 @@ onMounted(() => {
       </section>
 
       <section v-if="showStalls" class="mt-5" aria-labelledby="stalls-heading" data-testid="home-stall-results">
-        <div class="border-bottom pb-2 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom pb-2 mb-3">
           <h2 id="stalls-heading" class="h5 mb-0">
             <span class="hw-mono">{{ stalls.length }}</span> stall{{ stalls.length === 1 ? '' : 's' }}
           </h2>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="hw-label">Sort</span>
+            <FilterChips v-model="stallSort" data-testid="home-stall-sort" :options="STALL_SORTS" label="Sort stalls" small />
+          </div>
         </div>
+        <p v-if="findingSortLocation" class="small text-secondary">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Finding your location to sort stalls by distance...
+        </p>
+        <p v-else-if="sortLocationError" class="small text-secondary" role="status">
+          <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ sortLocationError }}
+        </p>
+        <p v-else-if="stallSort === 'distance' && stallOrigin && stalls.length" class="small text-secondary">
+          Nearest first, from {{ searchedPlace ? searchedPlace.label : 'your location' }}
+        </p>
         <div v-if="stalls.length" class="row g-4">
-          <div v-for="stall in stalls" :key="stall._id" class="col-sm-6 col-lg-4">
-            <StallCard :stall="stall" show-centre />
+          <div v-for="{ stall, km } in stallResults" :key="stall._id" class="col-sm-6 col-lg-4">
+            <StallCard :stall="stall" show-centre :distance-km="km" />
           </div>
         </div>
         <div v-else class="hw-surface p-3">No stalls match{{ hasFilters ? ' your search and filters' : '' }}.</div>

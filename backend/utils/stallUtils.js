@@ -2,6 +2,10 @@ import { CUISINE_VALUES } from './constants.js';
 
 // Checks for the stall details users send when adding or editing a stall.
 
+// The stalls everyone can see: not removed, and approved by an admin.
+// $ne: true also matches stalls saved before approvals existed (they have no pendingApproval).
+export const LISTED_STALL = { isActive: true, pendingApproval: { $ne: true } };
+
 export const STALL_NAME_MAX = 60;
 export const SPECIALITY_MAX = 60;
 

@@ -9,6 +9,7 @@
 import Favourite from '../models/Favourite.js'
 import Stall from '../models/Stall.js'
 import HawkerCentre from '../models/HawkerCentre.js'
+import { LISTED_STALL } from '../utils/stallUtils.js'
 
 const TARGET_MODELS = { Stall, HawkerCentre }
 
@@ -45,7 +46,7 @@ export async function addFavourite(req, res, next) {
     }
 
     // Make sure the stall / hawker centre actually exists (and the stall is still active)
-    const query = targetType === 'Stall' ? { _id: target, isActive: true } : { _id: target }
+    const query = targetType === 'Stall' ? { _id: target, ...LISTED_STALL } : { _id: target }
     const exists = await TargetModel.exists(query)
     if (!exists) {
       return res.status(404).json({ success: false, message: `${targetType} not found` })

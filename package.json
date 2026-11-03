@@ -13,6 +13,7 @@
     "lint": "pnpm --dir frontend lint",
     "seed": "pnpm --dir backend seed",
     "seed:demo": "pnpm --dir backend seed:demo",
+    "seed:admin": "pnpm --dir backend seed:admin",
     "import:centres": "pnpm --dir backend import:centres",
     "import:stalls": "pnpm --dir backend import:stalls",
     "migrate:cuisines": "pnpm --dir backend migrate:cuisines"

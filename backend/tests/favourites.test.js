@@ -114,7 +114,7 @@ test('POST /api/favourites only accepts a stall that is still active', async (t)
 
     assert.equal(response.status, 404);
     assert.equal((await response.json()).message, 'Stall not found');
-    assert.deepEqual(exists.mock.calls[0].arguments[0], { _id: STALL_ID, isActive: true });
+    assert.deepEqual(exists.mock.calls[0].arguments[0], { _id: STALL_ID, isActive: true, pendingApproval: { $ne: true } });
 });
 
 test('POST /api/favourites rejects a bad targetType or a missing target', async (t) => {

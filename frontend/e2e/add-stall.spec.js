@@ -1,4 +1,5 @@
-// Journey 7: a logged-in diner adds a stall that isn't listed yet and sees it on the centre page.
+// Journey 7: a logged-in diner adds a stall that isn't listed yet. It waits for an admin to approve it
+// (on the Admin page) before it shows on the centre page.
 import { test, expect, logInAsNewUser, openCentre, uniqueId } from './support/helpers.js'
 import { BETA } from '../../backend/scripts/e2eFixtures.js'
 
@@ -13,7 +14,7 @@ test.describe('Journey 7: add a stall to a hawker centre', () => {
     await page.getByTestId('stall-form-submit').click()
   }
 
-  test('a new stall appears in the list and stays after a reload', async ({ page }) => {
+  test('a new stall is sent for approval instead of appearing straight away', async ({ page }) => {
     const stallName = `E2E Fish Soup ${uniqueId()}`
     const listedCount = page.getByTestId('centre-listed-count')
     let countBefore
@@ -29,26 +30,28 @@ test.describe('Journey 7: add a stall to a hawker centre', () => {
       await submitStall(page, stallName)
     })
 
-    await test.step('See the stall in the list straight away', async () => {
+    await test.step('Be told it is waiting for an admin', async () => {
       await expect(page.getByTestId('stall-added-message')).toContainText(stallName)
-      await expect(stallRow(page, stallName)).toContainText('Fish soup')
-      await expect(listedCount).toHaveText(String(countBefore + 1))
+      await expect(page.getByTestId('stall-added-message')).toContainText('approved')
+      await expect(stallRow(page, stallName)).toHaveCount(0)
+      await expect(listedCount).toHaveText(String(countBefore))
     })
 
-    await test.step('Reload and see that it was saved', async () => {
+    await test.step('Reload and see it is still not listed', async () => {
       await page.reload()
-      await expect(stallRow(page, stallName)).toBeVisible()
+      await expect(page.getByTestId('stall-row').first()).toBeVisible()
+      await expect(stallRow(page, stallName)).toHaveCount(0)
     })
   })
 
-  test('the same stall name cannot be added twice', async ({ page }) => {
+  test('the same stall name cannot be added twice, even while the first waits for approval', async ({ page }) => {
     const stallName = `E2E Duplicate ${uniqueId()}`
 
     await test.step('Add a stall', async () => {
       await logInAsNewUser(page)
       await openCentre(page, BETA.name)
       await submitStall(page, stallName)
-      await expect(stallRow(page, stallName)).toBeVisible()
+      await expect(page.getByTestId('stall-added-message')).toContainText(stallName)
     })
 
     await test.step('Add it again and see the error', async () => {

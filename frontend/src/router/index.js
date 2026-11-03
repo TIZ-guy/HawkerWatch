@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/useAuthStore.js'
 
 // meta.guestOnly: logged-in users are sent home (login, register).
 // meta.requiresAuth: logged-out users are sent to /login and returned afterwards.
+// meta.requiresAdmin: also needs an admin; other users are sent home.
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -21,6 +22,7 @@ const router = createRouter({
     { path: '/reports', component: () => import('../views/CommunityReportsView.vue') },
     { path: '/favourites', component: FavouritesView, meta: { requiresAuth: true } },
     { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
+    { path: '/admin', component: () => import('../views/AdminView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/login', component: LoginView, meta: { guestOnly: true } },
     { path: '/register', component: RegisterView, meta: { guestOnly: true } },
     { path: '/:pathMatch(.*)*', component: HomeView }
@@ -35,6 +37,7 @@ router.beforeEach(async (to) => {
   await auth.loadCurrentUser()
 
   if (to.meta.requiresAuth && !auth.user) return { path: '/login', query: { redirect: to.fullPath } }
+  if (to.meta.requiresAdmin && !auth.isAdmin) return { path: '/' }
   if (to.meta.guestOnly && auth.user) return { path: '/' }
 })
 

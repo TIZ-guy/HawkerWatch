@@ -44,7 +44,9 @@ flowchart LR
 | Community report flagging: Flag button in each stall's recent updates; 3 flags hide a report everywhere | Done |
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA data: all 123 hawker centres (address, location, photo, stall count) and their closures, imported from data.gov.sg and refreshed weekly | Done |
-| Stalls added by users (no official stall list exists); the person who added a stall or an admin can edit it, admins can remove it | Done |
+| Stalls added by users (no official stall list exists); a stall a user adds is hidden until an admin approves it; the person who added a stall or an admin can edit it, admins can remove it | Done |
+| Admin page (`/admin`, admins only): approve or reject new stalls, remove and restore stalls, remove community reports (flagged ones first), refresh NEA data, and counts of pending stalls, live and flagged reports and users | Done |
+| Stall search results on the home page sorted nearest first (from Near me, a searched place, or the browser's location), with each stall's distance; A to Z on request | Done |
 | Stall data: 1437 stalls for all 123 NEA centres from `backend/data/stalls.json` (`pnpm import:stalls`). Real stalls from published food guides for 28 well-known centres; **sample stalls (not real businesses) for the other 95** | Done |
 | Cuisine is one of 12 fixed categories (Chinese, Malay, Indian, Peranakan, Western, Japanese, Korean, Thai, Vietnamese, Dessert, Drinks, Others), with the dish in a separate `speciality` field; fixed filter chips | Done |
 | Postal code and place search (OneMap, no token needed) on the home page and Explore Map: centres nearest to the place, with the same 1 / 5 / 10 km distances as Near me | Done |
@@ -89,6 +91,7 @@ The frontend runs at http://localhost:5173 and the API runs at http://localhost:
 - `pnpm lint`: lint the frontend with ESLint
 - `pnpm test:e2e`: run the Playwright end-to-end tests (first time: `pnpm --dir frontend exec playwright install chromium`). They only use the `hawker-watch-e2e` database and need `MONGO_URI` and `JWT_SECRET` in `backend/.env`
 - `pnpm seed`: replace the database contents with the real NEA centres and closures (needs internet), the stalls in `backend/data/stalls.json`, and demo activity: live and expired reports, 6 reviews with sample food illustrations from `backend/scripts/seed-photos`, favourites, 3 centre comments, a demo login, and a demo login with two-factor login on. The demo activity is only on sample stalls (made-up businesses), mostly at Aljunied Ave 2 Blk 117 and Cheng San Market (Ang Mo Kio Ave 10 Blk 527). **This deletes every account in the database**, including ones you registered, so only run it when you want a fresh start
+- `pnpm seed:admin`: create the admin login **admin@hawkerwatch.sg** / **HawkerAdmin#2026** (or make that account an admin again and reset its password). Change it with `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`; always set your own `ADMIN_PASSWORD` for the shared database, as the default is public in this repository: `$env:MONGO_DB_NAME='hawker-watch'; $env:ADMIN_PASSWORD='<a strong password>'; pnpm seed:admin; Remove-Item Env:MONGO_DB_NAME, Env:ADMIN_PASSWORD`
 - `pnpm seed:demo`: top up the demo activity before a presentation, **without deleting anything**: fresh live reports and today's food updates on the sample stalls, the 6 sample reviews (skipped if already there), and the two demo logins if they are missing. Reports expire after 60 minutes, so run it within the hour before. To fill the shared database the deployed site uses, in PowerShell: `$env:MONGO_DB_NAME='hawker-watch'; pnpm seed:demo; Remove-Item Env:MONGO_DB_NAME`
 - `pnpm import:centres`: import every NEA hawker centre and its closure dates from data.gov.sg. Safe to run any time: centres are updated, never duplicated, and nothing else is deleted. The server also does this by itself on start-up when the data is missing or over a week old (set `HAWKER_IMPORT_ON_START=off` to stop that)
 - `pnpm import:stalls`: import the stalls in `backend/data/stalls.json`, matched to centres by NEA serial number (run `pnpm import:centres` first). Safe to run again: stalls are updated, not duplicated, and stalls added by users are left alone. Refuses to run in production, because most of the file is sample data
@@ -148,10 +151,10 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first; each centre has `stallCount` (stalls listed now); plus `cuisines` (categories of the listed stalls) and `live` (`{ stallsReported, latestStatus, latestReportAt }` from live reports, or `null`) |
 | GET | `/api/hawker-centres/:id` | Includes official `closures` and `stallCount` |
 | GET | `/api/hawker-centres/:id/stalls` | Optional `search` (stall name or dish), `cuisine` (exact category); each stall has its newest live report as `liveReport` and its star rating as `rating: { average, count }` |
-| POST | `/api/hawker-centres/:id/stalls` | `{ name, cuisine, speciality, unitNumber }` (all but name optional; cuisine is one of the 12 categories, any capitals; speciality is the dish, up to 60 characters; unit like `01-23`); login required; 409 for a name or unit number already used there; rate limited |
+| POST | `/api/hawker-centres/:id/stalls` | `{ name, cuisine, speciality, unitNumber }` (all but name optional; cuisine is one of the 12 categories, any capitals; speciality is the dish, up to 60 characters; unit like `01-23`); login required; 409 for a name or unit number already used there; rate limited; a stall added by a user has `pendingApproval: true` and is hidden until an admin approves it |
 | GET | `/api/hawker-centres/:id/community-summary` | Live report counts by status |
 | GET | `/api/hawker-centres/:id/reviews` | The newest current reviews across the centre's stalls (at most 20), each with `stall: { _id, name }`; for the centre page's Reviews tab and photo strip |
-| GET | `/api/stalls` | Optional `search` (stall name or dish), `cuisine` (exact category); includes the stall's centre name and address, and `rating` |
+| GET | `/api/stalls` | Optional `search` (stall name or dish), `cuisine` (exact category); includes the stall's centre name, address and location, and `rating`; approved stalls only |
 | GET | `/api/stalls/:id` | Includes `liveReport`, `rating`, and the centre's location and official closures; 404 once removed |
 | PATCH | `/api/stalls/:id` | Any of `{ name, cuisine, speciality, unitNumber }`; login required; the person who added it or an admin |
 | DELETE | `/api/stalls/:id` | Admins only; hides the stall (its reviews are kept) |
@@ -165,11 +168,18 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | GET | `/api/reports/recent` | Newest live reports across all centres; optional `status` |
 | GET | `/api/reports/settings` | Whether the location check is on |
 | POST | `/api/reports/:id/flag` | Login required; flags a report |
+| DELETE | `/api/reports/:id` | Admins only; deletes a report for good |
 | GET | `/api/stalls/:id/reviews` | `{ average, count, reviews }`; only reviews from the last 3 months; newest first, each with the author's name |
 | POST | `/api/stalls/:id/reviews` | `{ rating: 1-5, text (optional, up to 500 characters) }`; login required; one review per user per stall (409); rate limited |
 | PATCH | `/api/reviews/:id` | `{ rating, text }`; login required; author only |
 | DELETE | `/api/reviews/:id` | Login required; author or admin; also deletes the review's photos |
 | POST | `/api/admin/import-centres` | Admins only; imports the NEA centres and closures now |
+| GET | `/api/admin/overview` | Admins only; counts of pending, listed and removed stalls, users, and live and flagged reports |
+| GET | `/api/admin/stalls` | Admins only; `status` = `pending` (default), `listed` or `removed`, optional `search`; newest 100, with who added each |
+| POST | `/api/admin/stalls/:id/approve` | Admins only; lists a stall waiting for approval |
+| POST | `/api/admin/stalls/:id/reject` | Admins only; deletes a stall waiting for approval |
+| POST | `/api/admin/stalls/:id/restore` | Admins only; brings back a removed stall with its reviews |
+| GET | `/api/admin/reports` | Admins only; newest 100 reports with who sent them and their flag count; `flagged=true` for flagged ones only |
 | GET | `/api/geocode?q=289876` | Postal code, address or place search through OneMap; up to 5 places `{ name, address, postalCode, lat, lng }`; rate limited |
 | POST | `/api/reviews/:id/photos` | `multipart/form-data` with images in `photos`; JPEG, PNG or WebP, up to 2 MB each, 4 per review; login required; author only; rate limited |
 | DELETE | `/api/reviews/:id/photos/:photoId` | Login required; author or admin |
