@@ -9,6 +9,7 @@ import {
 import { duplicateCutoff } from '../utils/reportUtils.js'
 import { cleanNote, isExpired, isHidden, isLive } from '../utils/foodUpdateUtils.js'
 import { distanceMetres, formatMetres, isCoordinate } from '../utils/geo.js'
+import { logAdminAction, quote, readable } from '../utils/adminLog.js'
 
 // Food updates use the same location check as status reports (REPORT_LOCATION_CHECK=off turns both off).
 const locationCheckOn = () => process.env.REPORT_LOCATION_CHECK !== 'off'
@@ -137,4 +138,22 @@ export async function flagFoodUpdate(req, res) {
     success: true,
     data: { flagCount: updated.flaggedBy.length, hidden: isHidden(updated) }
   })
+}
+
+// DELETE /api/food-updates/:id
+// Admins only (checked in foodUpdateRoutes.js). Deletes the update for good, e.g. one that is spam or abusive.
+export async function deleteFoodUpdate(req, res) {
+  const { id } = req.params
+  if (!isObjectId(id)) return fail(res, 400, 'Invalid food update id')
+
+  const update = await FoodUpdate.findByIdAndDelete(id).populate('stall', 'name')
+  if (!update) return fail(res, 404, 'Food update not found')
+
+  const stallName = update.stall?.name ? ` on "${update.stall.name}"` : ''
+  const note = update.note ? `: ${quote(update.note)}` : ''
+  await logAdminAction(req.user, 'foodUpdate.delete', `Deleted a ${readable(update.type)} food update${stallName}${note}`, {
+    type: 'FoodUpdate', id: update._id, user: update.user
+  })
+
+  res.json({ success: true, data: { id: update._id } })
 }

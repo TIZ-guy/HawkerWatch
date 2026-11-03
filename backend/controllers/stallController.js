@@ -2,6 +2,7 @@ import Stall from '../models/Stall.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import { contains, getLiveReports, getRatings, ratingFor } from '../utils/hawkerUtils.js';
 import { checkStallDetails, exactly, LISTED_STALL } from '../utils/stallUtils.js';
+import { logAdminAction } from '../utils/adminLog.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -220,6 +221,7 @@ export const removeStall = async (req, res, next) => {
         stall.isActive = false;
         stall.unitNumber = undefined;
         await stall.save();
+        await logAdminAction(req.user, 'stall.remove', `Removed stall "${stall.name}"`, { type: 'Stall', id: stall._id, user: stall.addedBy });
 
         res.status(200).json({ success: true, data: { id: stall._id } });
     } catch (error) {

@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 
 import { updateReview, deleteReview, addReviewPhotos, deleteReviewPhoto } from '../controllers/reviewController.js';
 // Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, notBanned } from '../middleware/authMiddleware.js';
 import { MAX_REVIEW_PHOTOS, MAX_PHOTO_BYTES } from '../utils/constants.js';
 
 // Listing and posting reviews live under /api/stalls/:id/reviews (stallRoutes.js).
@@ -28,11 +28,11 @@ const photoLimiter = rateLimit({
 
 const router = express.Router(); // sub application, mounted at /api/reviews
 
-router.patch('/:id', protect, updateReview);
+router.patch('/:id', protect, notBanned, updateReview);
 
 router.delete('/:id', protect, deleteReview);
 
-router.post('/:id/photos', protect, photoLimiter, upload.array('photos', MAX_REVIEW_PHOTOS), addReviewPhotos);
+router.post('/:id/photos', protect, notBanned, photoLimiter, upload.array('photos', MAX_REVIEW_PHOTOS), addReviewPhotos);
 
 router.delete('/:id/photos/:photoId', protect, deleteReviewPhoto);
 

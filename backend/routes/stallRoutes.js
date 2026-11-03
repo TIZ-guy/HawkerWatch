@@ -10,7 +10,7 @@ import {
 } from '../controllers/stallController.js';
 import { getStallReviews, addReview } from '../controllers/reviewController.js';
 // Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
-import { protect, requireRole } from '../middleware/authMiddleware.js';
+import { protect, requireRole, notBanned } from '../middleware/authMiddleware.js';
 
 // Stops review spam: each IP can post a limited number of reviews per window
 const reviewLimiter = rateLimit({
@@ -27,7 +27,7 @@ router.get('/', getStalls);
 
 router.get('/:id', getStallById);
 
-router.patch('/:id', protect, updateStall); // the person who added it, or an admin (checked in the controller)
+router.patch('/:id', protect, notBanned, updateStall); // the person who added it, or an admin (checked in the controller)
 
 router.delete('/:id', protect, requireRole('admin'), removeStall);
 
@@ -35,7 +35,7 @@ router.get('/:id/reports', getStallReports);
 
 router.get('/:id/reviews', getStallReviews);
 
-router.post('/:id/reviews', protect, reviewLimiter, addReview);
+router.post('/:id/reviews', protect, notBanned, reviewLimiter, addReview);
 
 // EXPORT
 export default router;

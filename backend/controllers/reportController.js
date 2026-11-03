@@ -10,6 +10,7 @@ import {
   FLAG_HIDE_THRESHOLD
 } from '../utils/reportUtils.js'
 import { distanceMetres, formatMetres, isCoordinate } from '../utils/geo.js'
+import { logAdminAction, readable } from '../utils/adminLog.js'
 
 // Set REPORT_LOCATION_CHECK=off in backend/.env to test or demo away from a hawker centre.
 const locationCheckOn = () => process.env.REPORT_LOCATION_CHECK !== 'off'
@@ -185,8 +186,13 @@ export async function deleteReport(req, res) {
   const { id } = req.params
   if (!isObjectId(id)) return fail(res, 400, 'Invalid report id')
 
-  const report = await StatusReport.findByIdAndDelete(id)
+  const report = await StatusReport.findByIdAndDelete(id).populate('stall', 'name')
   if (!report) return fail(res, 404, 'Report not found')
+
+  const stallName = report.stall?.name ? ` on "${report.stall.name}"` : ''
+  await logAdminAction(req.user, 'report.delete', `Deleted a ${readable(report.status)} report${stallName}`, {
+    type: 'StatusReport', id: report._id, user: report.user
+  })
 
   res.json({ success: true, data: { id: report._id } })
 }

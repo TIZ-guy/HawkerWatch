@@ -6,6 +6,7 @@ import { REVIEW_TEXT_MAX_LENGTH, MAX_REVIEW_PHOTOS } from '../utils/constants.js
 import { detectImageType } from '../utils/photoUtils.js';
 import { currentReviewFilter, expiredReviewFilter, reviewExpiresAt } from '../utils/reviewUtils.js';
 import { LISTED_STALL } from '../utils/stallUtils.js';
+import { logAdminAction, quote } from '../utils/adminLog.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -361,6 +362,14 @@ export const deleteReview = async (req, res, next) => {
 
         await ReviewPhoto.deleteMany({ review: review._id }); // the photos go with the review
         await review.deleteOne();
+
+        // Admins deleting someone else's review goes in the admin activity log
+        if (!isAuthor(review, req.user)) {
+            const text = review.text ? `: ${quote(review.text)}` : '';
+            await logAdminAction(req.user, 'review.delete', `Deleted a ${review.rating}-star review${text}`, {
+                type: 'Review', id: review._id, user: review.user
+            });
+        }
 
         res.status(200).json({ success: true, data: { id: review._id } });
     } catch (error) {

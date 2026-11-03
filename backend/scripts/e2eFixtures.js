@@ -6,6 +6,13 @@ export const DEMO_USER = {
   password: 'Hawker#E2e1'
 }
 
+// Logs in to the Admin page in the admin journey
+export const ADMIN_USER = {
+  name: 'E2E Admin',
+  email: 'e2e-admin@example.com',
+  password: 'Hawker#E2e1'
+}
+
 export const ALPHA = {
   name: 'Alpha Food Centre',
   address: '1 Alpha Road',

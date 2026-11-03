@@ -74,6 +74,8 @@ export default {
           name: { type: 'string', example: 'Demo Diner' },
           email: { type: 'string', example: 'diner@example.com' },
           role: { type: 'string', enum: ['user', 'admin'] },
+          bannedUntil: { type: 'string', format: 'date-time', nullable: true, description: 'Set while an admin has suspended or banned the user from posting (year 9999 for a permanent ban)' },
+          banReason: { type: 'string' },
           twoFactorEnabled: { type: 'boolean', example: false },
           hasPassword: { type: 'boolean', example: true, description: 'false for accounts made with Google that have not set a password. Sent for the logged-in user only.' },
           createdAt: { type: 'string', format: 'date-time' }
@@ -585,6 +587,21 @@ export default {
         }
       }
     },
+    '/api/food-updates/{id}': {
+      delete: {
+        tags: ['Food updates'],
+        summary: 'Delete a food update (admins only)',
+        ...loginRequired,
+        parameters: [id('id', 'Food update id')],
+        responses: {
+          200: ok('Deleted', { type: 'object', example: { id: '64b7f0c2a1b2c3d4e5f60721' } }),
+          400: error('Invalid id'),
+          401: notLoggedIn,
+          403: error('Not an admin'),
+          404: error('Food update not found')
+        }
+      }
+    },
     '/api/food-updates/{id}/flag': {
       post: {
         tags: ['Food updates'],
@@ -818,6 +835,92 @@ export default {
         parameters: [query('flagged', 'true for only reports flagged at least once', { type: 'string', enum: ['true'] })],
         responses: {
           200: ok('Reports', { type: 'object', properties: { reports: { type: 'array', items: { type: 'object' } }, hideThreshold: { type: 'integer', example: 3 } } }),
+          401: notLoggedIn,
+          403: error('Not an admin')
+        }
+      }
+    },
+
+    '/api/admin/food-updates': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Newest food updates, with who sent them (admins only)',
+        description: 'Up to 100, expired ones included. Each has user { _id, name, email }, flagCount, live and hidden.',
+        ...loginRequired,
+        parameters: [query('flagged', 'true for only updates flagged at least once', { type: 'string', enum: ['true'] })],
+        responses: { 200: ok('Food updates', { type: 'array', items: { type: 'object' } }), 401: notLoggedIn, 403: error('Not an admin') }
+      }
+    },
+    '/api/admin/reviews': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Newest reviews, with who wrote them (admins only)',
+        description: 'Up to 100. Each has stall { name, hawkerCentre { name } }, user { _id, name, email } and photoCount. Delete with DELETE /api/reviews/{id}.',
+        ...loginRequired,
+        responses: { 200: ok('Reviews', { type: 'array', items: { type: 'object' } }), 401: notLoggedIn, 403: error('Not an admin') }
+      }
+    },
+    '/api/admin/comments': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Newest centre comments, with who wrote them (admins only)',
+        description: 'Up to 100. Delete with DELETE /api/comments/{id}.',
+        ...loginRequired,
+        responses: { 200: ok('Comments', { type: 'array', items: { type: 'object' } }), 401: notLoggedIn, 403: error('Not an admin') }
+      }
+    },
+    '/api/admin/users': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Users, with their ban status and how much they have posted (admins only)',
+        description: 'Newest first, up to 100. Each has banned, permanentBan and posts { reports, reviews, comments }.',
+        ...loginRequired,
+        parameters: [
+          query('search', 'Part of the name or email'),
+          query('filter', 'Only admins, or only banned users', { type: 'string', enum: ['admins', 'banned'] })
+        ],
+        responses: { 200: ok('Users', { type: 'array', items: ref('User') }), 401: notLoggedIn, 403: error('Not an admin') }
+      }
+    },
+    '/api/admin/users/{id}/role': {
+      patch: {
+        tags: ['Admin'],
+        summary: "Make a user an admin, or remove their admin role (admins only)",
+        description: 'You cannot change your own role, so there is always an admin left.',
+        ...loginRequired,
+        parameters: [id('id', 'User id')],
+        requestBody: { required: true, ...json({ type: 'object', required: ['role'], properties: { role: { type: 'string', enum: ['user', 'admin'] } } }, { role: 'admin' }) },
+        responses: { 200: ok('Role changed', ref('User')), 400: error('Bad role, or your own account'), 401: notLoggedIn, 403: error('Not an admin'), 404: error('User not found') }
+      }
+    },
+    '/api/admin/users/{id}/ban': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Suspend or ban a user from posting (admins only)',
+        description: 'Banned users can still log in and browse, but cannot post reports, food updates, reviews, comments or stalls. Admins cannot be banned.',
+        ...loginRequired,
+        parameters: [id('id', 'User id')],
+        requestBody: { required: true, ...json({ type: 'object', properties: { days: { type: 'integer', minimum: 1, maximum: 365, nullable: true, description: 'null for a permanent ban' }, reason: { type: 'string', maxLength: 200 } } }, { days: 7, reason: 'Fake queue reports' }) },
+        responses: { 200: ok('Banned', ref('User')), 400: error('Bad days or reason, your own account, or an admin'), 401: notLoggedIn, 403: error('Not an admin'), 404: error('User not found') }
+      }
+    },
+    '/api/admin/users/{id}/unban': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Lift a ban (admins only)',
+        ...loginRequired,
+        parameters: [id('id', 'User id')],
+        responses: { 200: ok('Unbanned', ref('User')), 400: error('Not banned'), 401: notLoggedIn, 403: error('Not an admin'), 404: error('User not found') }
+      }
+    },
+    '/api/admin/activity': {
+      get: {
+        tags: ['Admin'],
+        summary: 'The admin activity log (admins only)',
+        description: 'Newest first, up to 100: who approved, removed, deleted or banned what, and when.',
+        ...loginRequired,
+        responses: {
+          200: ok('Entries', { type: 'array', items: { type: 'object', example: { action: 'stall.approve', summary: 'Approved stall "Ah Hock"', admin: { name: 'HawkerWatch Admin' }, createdAt: '2026-11-03T04:00:00.000Z' } } }),
           401: notLoggedIn,
           403: error('Not an admin')
         }

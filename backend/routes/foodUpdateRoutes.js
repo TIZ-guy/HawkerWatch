@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { submitFoodUpdate, listFoodUpdates, flagFoodUpdate } from '../controllers/foodUpdateController.js'
-import { protect } from '../middleware/authMiddleware.js'
+import { submitFoodUpdate, listFoodUpdates, flagFoodUpdate, deleteFoodUpdate } from '../controllers/foodUpdateController.js'
+import { protect, requireRole, notBanned } from '../middleware/authMiddleware.js'
 
 // Stops spamming: each IP can submit a limited number of food updates per window
 const submitLimiter = rateLimit({
@@ -15,7 +15,8 @@ const submitLimiter = rateLimit({
 const router = Router()
 
 router.get('/', listFoodUpdates)
-router.post('/', protect, submitLimiter, submitFoodUpdate)
-router.post('/:id/flag', protect, flagFoodUpdate)
+router.post('/', protect, notBanned, submitLimiter, submitFoodUpdate)
+router.post('/:id/flag', protect, notBanned, flagFoodUpdate)
+router.delete('/:id', protect, requireRole('admin'), deleteFoodUpdate)
 
 export default router

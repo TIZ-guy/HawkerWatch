@@ -1,5 +1,6 @@
 import User from '../models/User.js'
 import { AUTH_COOKIE, verifyToken } from '../utils/authToken.js'
+import { banMessage, isBanned } from '../utils/banUtils.js'
 
 const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode })
 
@@ -34,4 +35,12 @@ export function requireRole(...roles) {
     }
     next()
   }
+}
+
+// Put after protect on routes that post or change something people see (reports, reviews, comments...).
+// Suspended and banned users get 403 with the reason; they can still browse and delete their own posts.
+// Usage: router.post('/', protect, notBanned, createReport)
+export function notBanned(req, _res, next) {
+  if (isBanned(req.user)) throw httpError(403, banMessage(req.user))
+  next()
 }

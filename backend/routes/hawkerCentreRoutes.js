@@ -11,7 +11,7 @@ import { getCentreComments, addComment } from '../controllers/commentController.
 import { addStall } from '../controllers/stallController.js';
 import { getCentreReviews } from '../controllers/reviewController.js';
 // Kia's login check: reads the login cookie and sets req.user (401 if not logged in)
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, notBanned } from '../middleware/authMiddleware.js';
 
 // Stops comment spam: each IP can post a limited number of comments per window
 const commentLimiter = rateLimit({
@@ -39,7 +39,7 @@ router.get('/:id', getHawkerCentreById);
 
 router.get('/:id/stalls', getHawkerCentreStalls);
 
-router.post('/:id/stalls', protect, stallLimiter, addStall);
+router.post('/:id/stalls', protect, notBanned, stallLimiter, addStall);
 
 router.get('/:id/community-summary', getCommunitySummary);
 
@@ -47,7 +47,7 @@ router.get('/:id/reviews', getCentreReviews);
 
 router.get('/:id/comments', getCentreComments);
 
-router.post('/:id/comments', protect, commentLimiter, addComment);
+router.post('/:id/comments', protect, notBanned, commentLimiter, addComment);
 
 // EXPORT
 export default router;

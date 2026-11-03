@@ -8,6 +8,7 @@ import HawkerCentre from '../models/HawkerCentre.js';
 import ImportLog from '../models/ImportLog.js';
 import Stall from '../models/Stall.js';
 import User from '../models/User.js';
+import AdminAction from '../models/AdminAction.js';
 import Review from '../models/Review.js';
 import { AUTH_COOKIE, signToken } from '../utils/authToken.js';
 import { checkStallDetails, normaliseUnitNumber } from '../utils/stallUtils.js';
@@ -212,9 +213,11 @@ test('DELETE /api/stalls/:id is for admins only, and hides the stall instead of 
     await t.test('an admin removes it', async (t) => {
         const headers = loginAs(t, admin);
         const stall = savedStall(t);
+        const log = t.mock.method(AdminAction, 'create', async (fields) => fields);
         const base = await startServer(t);
 
         const response = await send(`${base}/api/stalls/${STALL_ID}`, 'DELETE', headers);
+        assert.equal(log.mock.calls[0].arguments[0].action, 'stall.remove');
 
         assert.equal(response.status, 200);
         assert.equal(stall.isActive, false);
@@ -249,6 +252,7 @@ test('POST /api/admin/import-centres runs the import for an admin', async (t) =>
     }));
     t.mock.method(ImportLog, 'create', async (fields) => ({ ...fields, recordsCreated: 0, recordsUpdated: 0, save: async () => {} }));
     t.mock.method(HawkerCentre, 'updateOne', async () => ({ upsertedCount: 1 }));
+    t.mock.method(AdminAction, 'create', async (fields) => fields);
     const base = await startServer(t);
 
     const response = await send(`${base}/api/admin/import-centres`, 'POST', headers);

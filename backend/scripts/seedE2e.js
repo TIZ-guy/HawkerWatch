@@ -16,7 +16,7 @@ import Stall from '../models/Stall.js'
 import StatusReport from '../models/StatusReport.js'
 import User from '../models/User.js'
 import { assertE2eDatabase } from '../utils/e2eGuard.js'
-import { ALPHA, BETA, BETA_STALL, CENTRES, DEMO_USER, GAMMA, GAMMA_STALL, QUIET_STALL, REPORT_TARGET_STALL, REPORTED_STALL } from './e2eFixtures.js'
+import { ADMIN_USER, ALPHA, BETA, BETA_STALL, CENTRES, DEMO_USER, GAMMA, GAMMA_STALL, QUIET_STALL, REPORT_TARGET_STALL, REPORTED_STALL } from './e2eFixtures.js'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -45,6 +45,12 @@ async function seed() {
     name: DEMO_USER.name,
     email: DEMO_USER.email,
     passwordHash: await bcrypt.hash(DEMO_USER.password, 10)
+  })
+  await User.create({
+    name: ADMIN_USER.name,
+    email: ADMIN_USER.email,
+    passwordHash: await bcrypt.hash(ADMIN_USER.password, 10),
+    role: 'admin'
   })
 
   const [alpha, beta, gamma] = await HawkerCentre.create(CENTRES.map((centre) => {

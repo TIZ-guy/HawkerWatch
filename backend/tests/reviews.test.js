@@ -8,6 +8,7 @@ import ReviewPhoto from '../models/ReviewPhoto.js';
 import Stall from '../models/Stall.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import User from '../models/User.js';
+import AdminAction from '../models/AdminAction.js';
 import { AUTH_COOKIE, signToken } from '../utils/authToken.js';
 import { REVIEW_TEXT_MAX_LENGTH, MAX_PHOTO_BYTES } from '../utils/constants.js';
 import { reviewExpiresAt } from '../utils/reviewUtils.js';
@@ -233,12 +234,15 @@ test('DELETE /api/reviews/:id works for the author and for an admin', async (t) 
         await t.test(user.name, async (t) => {
             const headers = loginAs(t, user);
             const review = savedReview(t);
+            const log = t.mock.method(AdminAction, 'create', async (fields) => fields);
             const base = await startServer(t);
 
             const response = await send(`${base}/api/reviews/${REVIEW_ID}`, 'DELETE', headers);
 
             assert.equal(response.status, 200);
             assert.equal(review.deleteOne.mock.callCount(), 1);
+            // Only an admin deleting someone else's review goes in the activity log
+            assert.equal(log.mock.callCount(), user === admin ? 1 : 0);
         });
     }
 });

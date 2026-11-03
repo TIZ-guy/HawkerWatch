@@ -45,7 +45,10 @@ flowchart LR
 | Interactive API docs at `/api/docs` | Done |
 | Official NEA data: all 123 hawker centres (address, location, photo, stall count) and their closures, imported from data.gov.sg and refreshed weekly | Done |
 | Stalls added by users (no official stall list exists); a stall a user adds is hidden until an admin approves it; the person who added a stall or an admin can edit it, admins can remove it | Done |
-| Admin page (`/admin`, admins only): approve or reject new stalls, remove and restore stalls, remove community reports (flagged ones first), refresh NEA data, and counts of pending stalls, live and flagged reports and users | Done |
+| Admin page (`/admin`, admins only): approve or reject new stalls, remove and restore stalls, refresh NEA data, and counts of pending stalls, live and flagged posts, users and banned users | Done |
+| Moderation queue on the Admin page: community reports and food updates (flagged ones first), reviews and comments in one place, each deletable, with a shortcut to the author's account | Done |
+| Users on the Admin page: suspend (1, 7 or 30 days) or ban users from posting, with a reason they are shown; lift bans; make users admins or remove the role; post counts to spot spammers | Done |
+| Admin activity log: every approval, removal, deletion, ban and role change, by which admin and when (also deletions made on stall and centre pages) | Done |
 | Stall search results on the home page sorted nearest first (from Near me, a searched place, or the browser's location), with each stall's distance; A to Z on request | Done |
 | Stall data: 1437 stalls for all 123 NEA centres from `backend/data/stalls.json` (`pnpm import:stalls`). Real stalls from published food guides for 28 well-known centres; **sample stalls (not real businesses) for the other 95** | Done |
 | Cuisine is one of 12 fixed categories (Chinese, Malay, Indian, Peranakan, Western, Japanese, Korean, Thai, Vietnamese, Dessert, Drinks, Others), with the dish in a separate `speciality` field; fixed filter chips | Done |
@@ -169,6 +172,7 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | GET | `/api/reports/settings` | Whether the location check is on |
 | POST | `/api/reports/:id/flag` | Login required; flags a report |
 | DELETE | `/api/reports/:id` | Admins only; deletes a report for good |
+| DELETE | `/api/food-updates/:id` | Admins only; deletes a food update for good |
 | GET | `/api/stalls/:id/reviews` | `{ average, count, reviews }`; only reviews from the last 3 months; newest first, each with the author's name |
 | POST | `/api/stalls/:id/reviews` | `{ rating: 1-5, text (optional, up to 500 characters) }`; login required; one review per user per stall (409); rate limited |
 | PATCH | `/api/reviews/:id` | `{ rating, text }`; login required; author only |
@@ -180,6 +184,14 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | POST | `/api/admin/stalls/:id/reject` | Admins only; deletes a stall waiting for approval |
 | POST | `/api/admin/stalls/:id/restore` | Admins only; brings back a removed stall with its reviews |
 | GET | `/api/admin/reports` | Admins only; newest 100 reports with who sent them and their flag count; `flagged=true` for flagged ones only |
+| GET | `/api/admin/food-updates` | Admins only; like `/api/admin/reports`, for food updates |
+| GET | `/api/admin/reviews` | Admins only; newest 100 reviews with the stall and author |
+| GET | `/api/admin/comments` | Admins only; newest 100 centre comments with the author |
+| GET | `/api/admin/users` | Admins only; optional `search` (name or email) and `filter` (`admins` or `banned`); newest 100, with ban status and post counts |
+| PATCH | `/api/admin/users/:id/role` | Admins only; `{ role: 'user' or 'admin' }`; not your own |
+| POST | `/api/admin/users/:id/ban` | Admins only; `{ days: 1-365 or null for permanent, reason }`; banned users get 403 on anything that posts; admins can't be banned |
+| POST | `/api/admin/users/:id/unban` | Admins only; lifts a ban |
+| GET | `/api/admin/activity` | Admins only; the newest 100 entries of the admin activity log |
 | GET | `/api/geocode?q=289876` | Postal code, address or place search through OneMap; up to 5 places `{ name, address, postalCode, lat, lng }`; rate limited |
 | POST | `/api/reviews/:id/photos` | `multipart/form-data` with images in `photos`; JPEG, PNG or WebP, up to 2 MB each, 4 per review; login required; author only; rate limited |
 | DELETE | `/api/reviews/:id/photos/:photoId` | Login required; author or admin |

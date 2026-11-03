@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { ROLES } from '../utils/constants.js'
+import { BAN_REASON_MAX_LENGTH } from '../utils/banUtils.js'
 
 const userSchema = new mongoose.Schema(
   {
@@ -18,6 +19,9 @@ const userSchema = new mongoose.Schema(
     // Google's id for the account ("sub" in the ID token), set the first time someone logs in with Google.
     googleId: { type: String, unique: true, sparse: true, select: false },
     role: { type: String, enum: ROLES, default: 'user' },
+    // Set by an admin to stop the user posting until this time (utils/banUtils.js). null when not banned.
+    bannedUntil: { type: Date, default: null },
+    banReason: { type: String, trim: true, maxlength: BAN_REASON_MAX_LENGTH, default: '' },
     // Two-factor login with an authenticator app. The secret is saved when setup starts,
     // but only used for logins once twoFactorEnabled is true (after the user types a correct code).
     twoFactorEnabled: { type: Boolean, default: false },

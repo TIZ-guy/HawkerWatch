@@ -6,6 +6,7 @@ import { startServer } from './startServer.js';
 import Comment from '../models/Comment.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import User from '../models/User.js';
+import AdminAction from '../models/AdminAction.js';
 import { AUTH_COOKIE, signToken } from '../utils/authToken.js';
 import { COMMENT_MAX_LENGTH } from '../utils/constants.js';
 
@@ -149,12 +150,15 @@ test('DELETE /api/comments/:id works for the author and for an admin', async (t)
         await t.test(user.name, async (t) => {
             const headers = loginAs(t, user);
             const comment = savedComment(t);
+            const log = t.mock.method(AdminAction, 'create', async (fields) => fields);
             const base = await startServer(t);
 
             const response = await send(`${base}/api/comments/${COMMENT_ID}`, 'DELETE', headers);
 
             assert.equal(response.status, 200);
             assert.equal(comment.deleteOne.mock.callCount(), 1);
+            // Only an admin deleting someone else's comment goes in the activity log
+            assert.equal(log.mock.callCount(), user === admin ? 1 : 0);
         });
     }
 });

@@ -1,6 +1,7 @@
 import Comment from '../models/Comment.js';
 import HawkerCentre from '../models/HawkerCentre.js';
 import { COMMENT_MAX_LENGTH } from '../utils/constants.js';
+import { logAdminAction, quote } from '../utils/adminLog.js';
 
 // Every response is { success: true, data } or { success: false, message }.
 // Errors are passed to next(error) so errorMiddleware.js builds the error response.
@@ -145,6 +146,13 @@ export const deleteComment = async (req, res, next) => {
         }
 
         await comment.deleteOne();
+
+        // Admins deleting someone else's comment goes in the admin activity log
+        if (!isAuthor(comment, req.user)) {
+            await logAdminAction(req.user, 'comment.delete', `Deleted a comment: ${quote(comment.text)}`, {
+                type: 'Comment', id: comment._id, user: comment.user
+            });
+        }
 
         res.status(200).json({ success: true, data: { id: comment._id } });
     } catch (error) {
