@@ -11,7 +11,9 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Email is invalid']
+      // something@domain.com or something@domain.sg (incl. .com.sg), exactly one @ and no spaces.
+      // Checked after lowercase, so Demo@Example.COM is fine too.
+      match: [/^[^\s@]+@[^\s@]+\.(com|sg)$/, 'Email must be a valid address ending in .com or .sg']
     },
     // select: false keeps the hash out of query results unless asked for with .select('+passwordHash')
     // Accounts made with "Continue with Google" have no password, only a googleId.

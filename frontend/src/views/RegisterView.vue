@@ -82,7 +82,8 @@ async function onGoogleCredential(credential) {
             <div class="mb-3">
               <label for="register-email" class="form-label fw-semibold">Email</label>
               <input id="register-email" data-testid="register-email" v-model.trim="form.email" type="email" class="form-control"
-                autocomplete="email" required />
+                autocomplete="email" pattern="[^\s@]+@[^\s@]+\.([cC][oO][mM]|[sS][gG])"
+                title="Use an email ending in .com or .sg" required />
             </div>
 
             <div class="mb-3">

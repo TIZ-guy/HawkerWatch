@@ -75,8 +75,72 @@ test('register hashes the password, ignores role and logs the user in', async (t
   assert.equal(res.cookies[AUTH_COOKIE].options.httpOnly, true)
 })
 
+test('User accepts emails ending in .com or .sg, in any capitals', () => {
+  const emails = ['demo@example.com', 'admin@hawkerwatch.sg', 'first.last+tag@sub.example.com.sg', 'Kia@Gmail.COM', 'a@nus.edu.sg']
+  for (const email of emails) {
+    assert.equal(new User({ name: 'A', email, passwordHash: 'x' }).validateSync(), undefined, email)
+  }
+})
+
+test('User rejects emails without one @, with spaces, or not ending in .com or .sg', () => {
+  const emails = [
+    'plainaddress', 'a@b', '@b.com', 'a@.com', 'a@b.', 'a b@c.com', 'a@@b.com', 'a@b.c@d.com',
+    'demo@hawkerwatch.test', 'a@b.co', 'a@example.org', 'a@nus.edu', 'a@example.com.my', 'a@example.sgp', 'a@com'
+  ]
+  for (const email of emails) {
+    const err = new User({ name: 'A', email, passwordHash: 'x' }).validateSync()
+    assert.equal(err?.errors.email?.message, 'Email must be a valid address ending in .com or .sg', email)
+  }
+})
+
+test('register rejects an invalid email with the schema error', async (t) => {
+  t.mock.method(User, 'exists', async () => null)
+  // Run the real schema validation, as User.create would.
+  t.mock.method(User, 'create', async (fields) => { const user = new User(fields); await user.validate(); return user })
+  await assert.rejects(
+    register({ body: { name: 'A', email: 'not-an-email', password: 'Password123!' } }, fakeRes()),
+    (err) => err.name === 'ValidationError' && err.errors.email.message === 'Email must be a valid address ending in .com or .sg'
+  )
+})
+
+test('register rejects a non-string or blank email', async () => {
+  for (const email of [{ $ne: null }, ['a@example.com'], '   ']) {
+    await rejectsWith(register({ body: { name: 'A', email, password: 'Password123!' } }, fakeRes()), 400)
+  }
+})
+
+test('register checks and stores the email trimmed and in lowercase', async (t) => {
+  const filters = []
+  t.mock.method(User, 'exists', async (filter) => { filters.push(filter); return null })
+  t.mock.method(User, 'create', async (fields) => new User(fields))
+
+  const res = fakeRes()
+  await register({ body: { name: 'Demo', email: '  Demo@HawkerWatch.SG ', password: 'Password123!' } }, res)
+
+  assert.deepEqual(filters[0], { email: 'demo@hawkerwatch.sg' })
+  assert.equal(res.body.data.user.email, 'demo@hawkerwatch.sg')
+})
+
 // User.findOne(...).select(...) is a chained query, so the mock returns an object with select().
 const mockFindOne = (t, user) => t.mock.method(User, 'findOne', () => ({ select: async () => user }))
+
+test('login looks up the email trimmed and in lowercase', async (t) => {
+  const user = new User({ name: 'Demo', email: 'demo@hawkerwatch.sg', passwordHash: await bcrypt.hash('Password123!', 4) })
+  let filter
+  t.mock.method(User, 'findOne', (query) => { filter = query; return { select: async () => user } })
+
+  const res = fakeRes()
+  await login({ body: { email: ' DEMO@hawkerwatch.sg ', password: 'Password123!' } }, res)
+
+  assert.deepEqual(filter, { email: 'demo@hawkerwatch.sg' })
+  assert.equal(res.statusCode, 200)
+})
+
+test('login rejects a blank email or password', async () => {
+  await rejectsWith(login({ body: { email: '  ', password: 'Password123!' } }, fakeRes()), 400)
+  await rejectsWith(login({ body: { email: 'a@example.com', password: '' } }, fakeRes()), 400)
+  await rejectsWith(login({}, fakeRes()), 400)
+})
 
 test('login rejects non-string credentials', async () => {
   await rejectsWith(login({ body: { email: { $ne: null }, password: 'x' } }, fakeRes()), 400)
