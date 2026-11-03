@@ -70,6 +70,8 @@ watch(() => props.photos.length, (length) => {
         :aria-label="`Photo ${index + 1} of ${photos.length}, from ${current.name}'s review. Go to the review`"
         v-on:click="emit('select', current.reviewId)"
       >
+        <!-- A blurred copy fills the space beside photos narrower than the slideshow -->
+        <img :src="photoUrl(current.photoId)" alt="" class="photo-backdrop" aria-hidden="true" />
         <img :src="photoUrl(current.photoId)" :alt="`Photo from ${current.name}'s review`" class="photo" />
       </button>
 
@@ -105,19 +107,33 @@ watch(() => props.photos.length, (length) => {
 
 <style scoped>
 .photo-button {
+  position: relative;
   display: block;
   width: 100%;
   padding: 0;
   border: 0;
+  overflow: hidden;
   background: #222;
   cursor: pointer;
 }
 
+/* contain shows the whole photo instead of cropping it to the slideshow's shape */
 .photo {
+  position: relative;
   display: block;
   width: 100%;
   height: 320px;
+  object-fit: contain;
+}
+
+.photo-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  filter: blur(24px) brightness(0.7);
+  transform: scale(1.1); /* hides the soft edges the blur leaves */
 }
 
 .photo-caption {

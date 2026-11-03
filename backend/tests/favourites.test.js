@@ -26,7 +26,7 @@ function loginAs(t, user) {
 
 function send(url, method, headers, body) {
     return fetch(url, {
-        method: method,
+        method,
         headers: { 'Content-Type': 'application/json', ...headers },
         body: body && JSON.stringify(body)
     });
@@ -47,7 +47,6 @@ function alertValidationError(alert) {
     const doc = new Favourite({ user: diner._id, targetType: 'Stall', target: STALL_ID, alert });
     return doc.validateSync();
 }
-
 
 test('every favourites route needs a login', async (t) => {
     const baseUrl = await startServer(t);
