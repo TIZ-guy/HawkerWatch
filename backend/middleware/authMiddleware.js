@@ -17,7 +17,8 @@ export async function protect(req, _res, next) {
   }
 
   // Look the user up again so deleted accounts and role changes take effect immediately.
-  const user = await User.findById(payload.id)
+  // The hash is loaded so the user sent back can say hasPassword; toJSON never sends the hash itself.
+  const user = await User.findById(payload.id).select('+passwordHash')
   if (!user) throw httpError(401, 'Please log in to continue')
 
   req.user = user

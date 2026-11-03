@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import PasswordInput from '../components/PasswordInput.vue'
 import PasswordChecklist from '../components/PasswordChecklist.vue'
+import GoogleSignInButton from '../components/GoogleSignInButton.vue'
 import { meetsPasswordRules } from '../utils/passwordRules.js'
 
 const auth = useAuthStore()
@@ -32,7 +33,28 @@ async function submit() {
   submitting.value = true
   try {
     await auth.register({ name: form.name, email: form.email, password: form.password })
-    router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+    goBack()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    submitting.value = false
+  }
+}
+
+const goBack = () => router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+
+// Signing up with Google logs straight in. If that Google email already has an account with
+// two-factor login on, the Login page asks for the code.
+async function onGoogleCredential(credential) {
+  error.value = ''
+  submitting.value = true
+  try {
+    const result = await auth.loginWithGoogle(credential)
+    if (result.twoFactorRequired) {
+      router.push({ path: '/login', query: route.query, state: { challengeToken: result.challengeToken } })
+      return
+    }
+    goBack()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -79,6 +101,8 @@ async function submit() {
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Creating account…' : 'Create account' }}
             </button>
+
+            <GoogleSignInButton text="signup_with" @credential="onGoogleCredential" @error="error = $event" />
           </form>
         </div>
 

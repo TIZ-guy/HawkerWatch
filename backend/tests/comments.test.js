@@ -30,7 +30,7 @@ function fakeQuery(result) {
 
 // Logs `user` in: protect() looks the user up again, so User.findById returns them.
 function loginAs(t, user) {
-    t.mock.method(User, 'findById', async () => user);
+    t.mock.method(User, 'findById', () => ({ select: async () => user }));
     return { Cookie: `${AUTH_COOKIE}=${signToken(user)}` };
 }
 

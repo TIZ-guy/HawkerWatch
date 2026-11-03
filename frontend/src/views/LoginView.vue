@@ -1,8 +1,9 @@
 <script setup>
-import { nextTick, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import PasswordInput from '../components/PasswordInput.vue'
+import GoogleSignInButton from '../components/GoogleSignInButton.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -20,6 +21,17 @@ const codeInput = ref(null)
 // Pages that need a login send people here with ?redirect=/where-they-were
 const goBack = () => router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
 
+// Both kinds of login answer the same way: logged in, or a 2FA code is still needed.
+async function finishLogin(result) {
+  if (result.twoFactorRequired) {
+    challengeToken.value = result.challengeToken
+    await nextTick()
+    codeInput.value?.focus()
+    return
+  }
+  goBack()
+}
+
 async function submit() {
   // Checked here rather than by disabling the button, because browser autofill
   // can fill the boxes without Vue noticing until the user clicks.
@@ -30,14 +42,28 @@ async function submit() {
   error.value = ''
   submitting.value = true
   try {
-    const result = await auth.login(form)
-    if (result.twoFactorRequired) {
-      challengeToken.value = result.challengeToken
-      await nextTick()
-      codeInput.value?.focus()
-      return
-    }
-    goBack()
+    await finishLogin(await auth.login(form))
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    submitting.value = false
+  }
+}
+
+// The Register page's Google button sends people here for the code when their account has 2FA on.
+onMounted(async () => {
+  const passed = history.state?.challengeToken
+  if (typeof passed !== 'string') return
+  // Used once, so going back to this page later starts a fresh login
+  history.replaceState({ ...history.state, challengeToken: undefined }, '')
+  await finishLogin({ twoFactorRequired: true, challengeToken: passed })
+})
+
+async function onGoogleCredential(credential) {
+  error.value = ''
+  submitting.value = true
+  try {
+    await finishLogin(await auth.loginWithGoogle(credential))
   } catch (err) {
     error.value = err.message
   } finally {
@@ -98,6 +124,8 @@ function startOver() {
               <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
               {{ submitting ? 'Logging in…' : 'Log in' }}
             </button>
+
+            <GoogleSignInButton @credential="onGoogleCredential" @error="error = $event" />
           </form>
 
           <form v-else class="p-4" novalidate @submit.prevent="submitCode">

@@ -21,7 +21,7 @@ export async function startSetup(req, res) {
 // Proves the app was set up correctly before 2FA is switched on, so nobody locks themselves out.
 export async function enableTwoFactor(req, res) {
   const { code } = req.body || {}
-  const user = await User.findById(req.user._id).select('+twoFactorSecret')
+  const user = await User.findById(req.user._id).select('+twoFactorSecret +passwordHash')
 
   if (user.twoFactorEnabled) throw httpError(400, 'Two-factor login is already on')
   if (!user.twoFactorSecret) throw httpError(400, 'Start the setup first')
@@ -34,13 +34,16 @@ export async function enableTwoFactor(req, res) {
 
 // POST /api/auth/2fa/disable  { password, code }
 // Needs both, so someone using a computer you left logged in can't turn it off.
+// Accounts made with Google that have no password only need the code.
 export async function disableTwoFactor(req, res) {
   const { password, code } = req.body || {}
   const user = await User.findById(req.user._id).select('+passwordHash +twoFactorSecret')
 
   if (!user.twoFactorEnabled) throw httpError(400, 'Two-factor login is already off')
-  const passwordMatches = typeof password === 'string' && (await bcrypt.compare(password, user.passwordHash).catch(() => false))
-  if (!passwordMatches) throw httpError(400, 'Password is incorrect')
+  if (user.passwordHash) {
+    const passwordMatches = typeof password === 'string' && (await bcrypt.compare(password, user.passwordHash).catch(() => false))
+    if (!passwordMatches) throw httpError(400, 'Password is incorrect')
+  }
   if (!checkCode(code, user.twoFactorSecret)) throw httpError(400, 'That code is wrong or has expired')
 
   user.twoFactorEnabled = false

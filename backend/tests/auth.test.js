@@ -228,14 +228,14 @@ test('protect rejects an invalid token', async () => {
 })
 
 test('protect rejects a token for a deleted user', async (t) => {
-  t.mock.method(User, 'findById', async () => null)
+  t.mock.method(User, 'findById', () => ({ select: async () => null }))
   const req = { cookies: { [AUTH_COOKIE]: signToken(demoUser()) } }
   await rejectsWith(protect(req, fakeRes(), () => {}), 401)
 })
 
 test('protect sets req.user for a valid token', async (t) => {
   const user = demoUser()
-  t.mock.method(User, 'findById', async () => user)
+  t.mock.method(User, 'findById', () => ({ select: async () => user }))
   const req = { cookies: { [AUTH_COOKIE]: signToken(user) } }
   let calledNext = false
   await protect(req, fakeRes(), () => { calledNext = true })

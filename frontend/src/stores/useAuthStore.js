@@ -34,6 +34,13 @@ export const useAuthStore = defineStore('auth', () => {
     return result
   }
 
+  // Same answer as login(): may still need a 2FA code.
+  async function loginWithGoogle(credential) {
+    const result = await authService.loginWithGoogle(credential)
+    if (result.user) user.value = result.user
+    return result
+  }
+
   async function loginTwoFactor(details) {
     user.value = await authService.loginTwoFactor(details)
   }
@@ -54,8 +61,9 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = await authService.updateMe({ name })
   }
 
+  // Also used by Google accounts to set their first password, so hasPassword turns true.
   async function changePassword(passwords) {
-    await authService.changePassword(passwords)
+    user.value = (await authService.changePassword(passwords)).user
   }
 
   async function logout() {
@@ -65,7 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, checked, isLoggedIn, isAdmin,
-    loadCurrentUser, login, loginTwoFactor, register, updateName, changePassword, logout,
+    loadCurrentUser, login, loginWithGoogle, loginTwoFactor, register, updateName, changePassword, logout,
     startTwoFactorSetup: authService.startTwoFactorSetup, enableTwoFactor, disableTwoFactor
   }
 })

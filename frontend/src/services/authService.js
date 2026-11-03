@@ -22,6 +22,16 @@ export async function login({ email, password }) {
   }
 }
 
+// credential is the ID token from Google's button. Same answer shape as login().
+export async function loginWithGoogle(credential) {
+  try {
+    const response = await axios.post(`${API_URL}/auth/google`, { credential })
+    return response.data.data
+  } catch (error) {
+    throw toError(error)
+  }
+}
+
 export async function loginTwoFactor({ challengeToken, code }) {
   try {
     const response = await axios.post(`${API_URL}/auth/login/2fa`, { challengeToken, code })

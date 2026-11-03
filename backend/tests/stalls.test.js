@@ -23,7 +23,7 @@ const admin = { _id: '64b7f0c2a1b2c3d4e5f60732', name: 'Admin', role: 'admin' };
 
 // Logs `user` in: protect() looks the user up again, so User.findById returns them.
 function loginAs(t, user) {
-    t.mock.method(User, 'findById', async () => user);
+    t.mock.method(User, 'findById', () => ({ select: async () => user }));
     return { Cookie: `${AUTH_COOKIE}=${signToken(user)}` };
 }
 

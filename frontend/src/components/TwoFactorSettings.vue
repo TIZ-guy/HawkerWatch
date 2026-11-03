@@ -10,7 +10,8 @@ const enabled = computed(() => Boolean(auth.user?.twoFactorEnabled))
 // Turning on: setup holds { secret, qrCode } after "Set up" is pressed, until a correct code is entered.
 const setup = ref(null)
 const code = ref('')
-// Turning off: needs the password and a current code.
+// Turning off: needs the password and a current code (just the code for Google accounts without a password).
+const hasPassword = computed(() => auth.user?.hasPassword !== false)
 const turningOff = ref(false)
 const password = ref('')
 
@@ -161,7 +162,7 @@ function cancel() {
 
       <!-- Turning off: password and a code -->
       <form v-else class="d-grid gap-3" @submit.prevent="turnOff">
-        <div>
+        <div v-if="hasPassword">
           <label for="two-factor-off-password" class="form-label">Password</label>
           <PasswordInput id="two-factor-off-password" v-model="password" autocomplete="current-password" required />
         </div>

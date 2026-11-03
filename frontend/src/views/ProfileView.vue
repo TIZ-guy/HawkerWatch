@@ -45,7 +45,9 @@ async function saveName() {
   }
 }
 
-// Password
+// Password. Accounts made with Google start without one (hasPassword false) and can set one here,
+// without a current password, to also log in with their email.
+const hasPassword = computed(() => user.value?.hasPassword !== false)
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -69,10 +71,11 @@ async function savePassword() {
   }
 
   savingPassword.value = true
+  const wasSet = hasPassword.value
   try {
     await auth.changePassword({ currentPassword: currentPassword.value, newPassword: newPassword.value })
     currentPassword.value = newPassword.value = confirmPassword.value = ''
-    passwordMessage.value = 'Password changed'
+    passwordMessage.value = wasSet ? 'Password changed' : 'Password set. You can now also log in with your email.'
   } catch (error) {
     passwordError.value = error.message
   } finally {
@@ -133,8 +136,11 @@ onMounted(async () => {
 
         <section class="hw-surface" aria-labelledby="password-heading">
           <form class="p-4 d-grid gap-3" @submit.prevent="savePassword">
-            <h2 id="password-heading" class="hw-section-title mb-0">Change password</h2>
-            <div>
+            <h2 id="password-heading" class="hw-section-title mb-0">{{ hasPassword ? 'Change password' : 'Set a password' }}</h2>
+            <p v-if="!hasPassword" class="small text-secondary mb-0">
+              You log in with Google. Set a password if you'd also like to log in with your email.
+            </p>
+            <div v-if="hasPassword">
               <label for="current-password" class="form-label">Current password</label>
               <PasswordInput id="current-password" v-model="currentPassword" autocomplete="current-password" required />
             </div>
@@ -150,7 +156,7 @@ onMounted(async () => {
             </div>
             <div class="d-flex flex-wrap align-items-center gap-3">
               <button type="submit" class="btn hw-btn-primary" :disabled="savingPassword">
-                {{ savingPassword ? 'Saving...' : 'Change password' }}
+                {{ savingPassword ? 'Saving...' : hasPassword ? 'Change password' : 'Set password' }}
               </button>
               <span v-if="passwordMessage" class="small text-secondary" role="status">{{ passwordMessage }}</span>
               <span v-if="passwordError" class="small text-brick" role="alert">{{ passwordError }}</span>

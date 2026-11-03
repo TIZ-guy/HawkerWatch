@@ -75,6 +75,7 @@ export default {
           email: { type: 'string', example: 'diner@example.com' },
           role: { type: 'string', enum: ['user', 'admin'] },
           twoFactorEnabled: { type: 'boolean', example: false },
+          hasPassword: { type: 'boolean', example: true, description: 'false for accounts made with Google that have not set a password. Sent for the logged-in user only.' },
           createdAt: { type: 'string', format: 'date-time' }
         }
       },
@@ -229,6 +230,20 @@ export default {
         }
       }
     },
+    '/api/auth/google': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Log in with Google',
+        description: 'Send the ID token from the "Sign in with Google" button as `credential`. Logs into the account with that Google id or the same verified email, or creates one without a password. Accounts with two-factor login on get `{ twoFactorRequired: true, challengeToken }`, as with POST /api/auth/login.',
+        requestBody: { required: true, ...json({ type: 'object', required: ['credential'] }, { credential: 'eyJhbGciOiJSUzI1NiIs...' }) },
+        responses: {
+          200: ok('Logged in; login cookie set', { type: 'object', properties: { user: ref('User') } }),
+          400: error('credential missing'),
+          401: error('Token invalid, expired, for another app, or email not verified by Google'),
+          429: error('Too many failed attempts')
+        }
+      }
+    },
     '/api/auth/me': {
       get: { tags: ['Auth'], summary: 'Get the logged-in user', ...loginRequired, responses: { 200: ok('Current user', { type: 'object', properties: { user: ref('User') } }), 401: notLoggedIn } },
       patch: {
@@ -243,9 +258,10 @@ export default {
       patch: {
         tags: ['Auth'],
         summary: 'Change your password',
+        description: 'Accounts made with Google that have no password yet (hasPassword false) can leave out currentPassword to set one.',
         ...loginRequired,
-        requestBody: { required: true, ...json({ type: 'object', required: ['currentPassword', 'newPassword'] }, { currentPassword: 'Hawker#Run1', newPassword: 'Hawker#Run2' }) },
-        responses: { 200: ok('Password changed', { type: 'object' }), 400: error('Wrong current password or the new one breaks a rule'), 401: notLoggedIn }
+        requestBody: { required: true, ...json({ type: 'object', required: ['newPassword'] }, { currentPassword: 'Hawker#Run1', newPassword: 'Hawker#Run2' }) },
+        responses: { 200: ok('Password changed', { type: 'object', properties: { user: ref('User') } }), 400: error('Wrong current password or the new one breaks a rule'), 401: notLoggedIn }
       }
     },
     '/api/auth/login/2fa': {
@@ -288,8 +304,9 @@ export default {
       post: {
         tags: ['Auth'],
         summary: 'Turn off two-factor login',
+        description: 'Accounts without a password (hasPassword false) only need the code.',
         ...loginRequired,
-        requestBody: { required: true, ...json({ type: 'object', required: ['password', 'code'] }, { password: 'Hawker#Run1', code: '123456' }) },
+        requestBody: { required: true, ...json({ type: 'object', required: ['code'] }, { password: 'Hawker#Run1', code: '123456' }) },
         responses: { 200: ok('Two-factor login off', { type: 'object', properties: { user: ref('User') } }), 400: error('Wrong password or code, or already off'), 401: notLoggedIn }
       }
     },

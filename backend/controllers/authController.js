@@ -3,6 +3,7 @@ import User from '../models/User.js'
 import { AUTH_COOKIE, signToken, cookieOptions, cookieMaxAge } from '../utils/authToken.js'
 import { passwordProblem } from '../utils/passwordRules.js'
 import { checkCode, signChallenge, verifyChallenge } from '../utils/twoFactor.js'
+import { verifyGoogleToken } from '../utils/googleAuth.js'
 
 const SALT_ROUNDS = 10
 
@@ -77,6 +78,44 @@ export async function login(req, res) {
   sendLoggedIn(res, 200, user)
 }
 
+// A Google name may already be used here, so "Kia Heng" becomes "Kia Heng 2", "Kia Heng 3", ...
+async function freeName(name) {
+  const base = tidyName(name).slice(0, 55)
+  let candidate = base
+  for (let n = 2; await nameTaken(candidate); n++) candidate = `${base} ${n}`
+  return candidate
+}
+
+// POST /api/auth/google  { credential }
+// credential is the ID token from Google's "Sign in with Google" button on the login page.
+// Logs into the account with that Google id, or the account with the same (Google-verified) email,
+// or creates a new account without a password.
+export async function googleLogin(req, res) {
+  const { credential } = req.body || {}
+  if (!isText(credential)) throw httpError(400, 'Google credential is required')
+
+  const google = await verifyGoogleToken(credential)
+  if (!google) throw httpError(401, 'Google sign-in failed, please try again')
+
+  let user = await User.findOne({ googleId: google.googleId }).select('+passwordHash')
+  if (!user) {
+    user = await User.findOne({ email: google.email }).select('+passwordHash')
+    if (user) {
+      user.googleId = google.googleId
+      await user.save()
+    } else {
+      user = await User.create({ name: await freeName(google.name), email: google.email, googleId: google.googleId })
+    }
+  }
+
+  // Google proves who you are, but an account with 2FA on still needs its code.
+  if (user.twoFactorEnabled) {
+    return res.json({ success: true, data: { twoFactorRequired: true, challengeToken: signChallenge(user) } })
+  }
+
+  sendLoggedIn(res, 200, user)
+}
+
 // POST /api/auth/login/2fa  { challengeToken, code }
 // Second step of logging in for users with 2FA: the challengeToken from POST /login plus the app's code.
 export async function loginTwoFactor(req, res) {
@@ -86,7 +125,7 @@ export async function loginTwoFactor(req, res) {
   const userId = verifyChallenge(challengeToken)
   if (!userId) throw httpError(401, 'Your login has timed out, please enter your password again')
 
-  const user = await User.findById(userId).select('+twoFactorSecret')
+  const user = await User.findById(userId).select('+twoFactorSecret +passwordHash')
   if (!user || !user.twoFactorEnabled) throw httpError(401, 'Please log in again')
   if (!checkCode(code, user.twoFactorSecret)) throw httpError(401, 'That code is wrong or has expired')
 
@@ -114,24 +153,27 @@ export async function updateMe(req, res) {
 }
 
 // PATCH /api/auth/password  { currentPassword, newPassword }  (needs protect)
+// Accounts made with Google have no password yet: they set one with just newPassword,
+// after which they can log in with their email too.
 export async function changePassword(req, res) {
   const { currentPassword, newPassword } = req.body || {}
 
-  if (!isText(currentPassword) || !isText(newPassword)) {
-    throw httpError(400, 'Current and new password are required')
-  }
+  if (!isText(newPassword)) throw httpError(400, 'New password is required')
   const problem = passwordProblem(newPassword)
   if (problem) throw httpError(400, `New ${problem.charAt(0).toLowerCase()}${problem.slice(1)}`)
 
   const user = await User.findById(req.user._id).select('+passwordHash')
-  const passwordMatches = user && (await bcrypt.compare(currentPassword, user.passwordHash).catch(() => false))
-  // 400 rather than 401, so the frontend doesn't mistake a typo for an expired login.
-  if (!passwordMatches) throw httpError(400, 'Current password is incorrect')
+  if (user.passwordHash) {
+    if (!isText(currentPassword)) throw httpError(400, 'Current and new password are required')
+    const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash).catch(() => false)
+    // 400 rather than 401, so the frontend doesn't mistake a typo for an expired login.
+    if (!passwordMatches) throw httpError(400, 'Current password is incorrect')
+  }
 
   user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
   await user.save()
 
-  res.json({ success: true, data: {} })
+  res.json({ success: true, data: { user } })
 }
 
 // POST /api/auth/logout
