@@ -28,6 +28,9 @@ const reminders = computed(() =>
   )
 )
 
+// The badge counts favourites, so two places due at 12:00 show 2
+const dueCount = computed(() => reminders.value.reduce((total, reminder) => total + reminder.items.length, 0))
+
 function dismiss(time) {
   dismissed.value = [...dismissed.value, reminderKey(now.value, time)]
   localStorage.setItem(STORAGE_KEY, JSON.stringify(dismissed.value))
@@ -48,16 +51,16 @@ onUnmounted(() => clearInterval(timer))
     <button
       type="button"
       class="btn btn-link nav-link position-relative px-2"
-      :aria-label="`Reminders: ${reminders.length} due`"
+      :aria-label="`Reminders: ${dueCount} favourite${dueCount === 1 ? '' : 's'} due`"
       :aria-expanded="open"
       @click="open = !open"
     >
       <i class="bi bi-bell"></i>
       <span
-        v-if="reminders.length"
+        v-if="dueCount"
         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
       >
-        {{ reminders.length }}
+        {{ dueCount }}
       </span>
     </button>
 
@@ -73,7 +76,17 @@ onUnmounted(() => clearInterval(timer))
               Dismiss
             </button>
           </div>
-          <p class="small mb-0">{{ reminder.names.join(', ') }}</p>
+          <!-- One line per favourite, so a centre name with a comma in it can't run into the next -->
+          <ul class="list-unstyled small mb-0">
+            <li v-for="item in reminder.items" :key="item.path" class="d-flex gap-2 mt-1">
+              <i
+                class="bi"
+                :class="item.type === 'Stall' ? 'bi-shop' : 'bi-building'"
+                aria-hidden="true"
+              ></i>
+              <RouterLink :to="item.path" @click="open = false">{{ item.name }}</RouterLink>
+            </li>
+          </ul>
         </div>
         <RouterLink class="small" to="/profile#alerts" @click="open = false"
           >Change reminders</RouterLink

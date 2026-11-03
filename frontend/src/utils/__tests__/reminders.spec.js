@@ -5,19 +5,28 @@ import { clockTime, dueReminders, reminderKey } from '@/utils/reminders.js'
 const NOW = new Date(2026, 9, 29, 12, 5)
 const THURSDAY = 4
 
-const favourite = (name, alert) => ({ target: { name }, alert })
+const favourite = (name, alert, targetType = 'Stall') => ({ targetType, target: { _id: name, name }, alert })
 
 describe('dueReminders', () => {
   it('groups favourites that share a time into one reminder, earliest first', () => {
     const favourites = [
       favourite('Sample Laksa', { enabled: true, days: [THURSDAY], time: '12:00' }),
-      favourite('Kampong Food Centre', { enabled: true, days: [THURSDAY], time: '11:30' }),
+      favourite('Kampong Food Centre', { enabled: true, days: [THURSDAY], time: '11:30' }, 'HawkerCentre'),
       favourite('Chicken Rice', { enabled: true, days: [THURSDAY], time: '12:00' })
     ]
 
     expect(dueReminders(favourites, NOW)).toEqual([
-      { time: '11:30', names: ['Kampong Food Centre'] },
-      { time: '12:00', names: ['Sample Laksa', 'Chicken Rice'] }
+      {
+        time: '11:30',
+        items: [{ name: 'Kampong Food Centre', type: 'HawkerCentre', path: '/hawker-centres/Kampong Food Centre' }]
+      },
+      {
+        time: '12:00',
+        items: [
+          { name: 'Sample Laksa', type: 'Stall', path: '/stalls/Sample Laksa' },
+          { name: 'Chicken Rice', type: 'Stall', path: '/stalls/Chicken Rice' }
+        ]
+      }
     ])
   })
 
