@@ -11,8 +11,11 @@ export const clockTime = (date) => `${pad(date.getHours())}:${pad(date.getMinute
 export const reminderKey = (date, time) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${time}`
 
+// The page a favourite links to
+const targetPath = (type, id) => (type === 'Stall' ? `/stalls/${id}` : `/hawker-centres/${id}`)
+
 // Today's reminders that are already due, grouped by time, earliest first.
-// e.g. [{ time: '11:30', names: ['Sample Laksa', 'Kampong Food Centre'] }]
+// e.g. [{ time: '11:30', items: [{ name: 'Sample Laksa', type: 'Stall', path: '/stalls/...' }] }]
 export function dueReminders(favourites, now = new Date()) {
   const today = now.getDay() // 0 = Sunday, the same numbering the alert days use
   const current = clockTime(now)
@@ -23,14 +26,18 @@ export function dueReminders(favourites, now = new Date()) {
     if (!alert?.enabled || !alert.time || !alert.days?.includes(today)) continue
     // "HH:mm" strings sort like times, so "11:30" > "09:00" works without converting
     if (alert.time > current) continue
-    const name = favourite.target?.name
-    if (!name) continue // the stall or centre was removed
+    const target = favourite.target
+    if (!target?.name) continue // the stall or centre was removed
 
     if (!groups[alert.time]) groups[alert.time] = []
-    groups[alert.time].push(name)
+    groups[alert.time].push({
+      name: target.name,
+      type: favourite.targetType,
+      path: targetPath(favourite.targetType, target._id)
+    })
   }
 
   return Object.keys(groups)
     .sort()
-    .map((time) => ({ time, names: groups[time] }))
+    .map((time) => ({ time, items: groups[time] }))
 }
