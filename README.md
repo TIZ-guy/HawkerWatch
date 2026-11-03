@@ -52,6 +52,7 @@ flowchart LR
 | Stall reviews: 1 to 5 stars with an optional written review, one per user per stall, counting for 3 months after they are posted or last edited; edit and delete your own; admins can delete any; average shown on stall cards | Done |
 | Review photos: up to 4 per review (shrunk in the browser, stored in MongoDB); a self-scrolling slideshow on the stall page links each photo to its review | Done |
 | Two-factor login (optional): authenticator-app codes, turned on and off from the Profile page | Done |
+| Google login: "Continue with Google" on the Login page and "Sign up with Google" on the Register page; links to an existing account with the same email, or creates one without a password that can set one later on the Profile page | Done |
 | Food updates: sold out, some items sold out or quality not great, with an optional note; live until midnight, flaggable | Done |
 | Confidence label: how much to trust a stall's community status, from the number and agreement of live reports | Done |
 | Automated tests: Vitest unit tests, API tests and Playwright end-to-end tests, all run in GitHub Actions CI (see `README.txt`) | Done |
@@ -103,7 +104,8 @@ After `pnpm seed` and `pnpm dev`, open http://localhost:5173.
 - **Explore Map (`/map`)**: every centre on the OneMap basemap, coloured by official closure status. Select a marker or a centre in the side list for details; **Show where I am** sorts the list nearest first, and **Distance from you** (All, 1 km, 5 km, 10 km) shows only centres inside that radius.
 - **Community reports (`/reports`)**: the newest live reports across all centres, filterable by status, plus **Report a stall** (choose a centre, a stall and a status). Reports need you to be within 200 m of the centre; your location is only used for that check. For testing or the demo away from a centre, put `REPORT_LOCATION_CHECK=off` in `backend/.env` and the form shows "Location check off (testing)".
 - **Favourites (`/favourites`, login required)**: the heart on any centre or stall saves it. The page shows saved centres and stalls with their closures, live status and reminder.
-- **Profile (`/profile`, login required)**: account details, change name, change password, and reminder days and time for each favourite. Due reminders show in the navbar bell while the app is open; no email or push notifications are sent.
+- **Log in / Create account (`/login`, `/register`)**: email and password, or the **Google** button below the form. Google login uses the team's OAuth client ID (built into `frontend/src/utils/googleSignIn.js` and `backend/utils/googleAuth.js`; it is public, not a secret) and only works on the Authorised JavaScript origins set in Google Cloud: `http://localhost:5173`, `http://localhost` and the deployed site.
+- **Profile (`/profile`, login required)**: account details, change name, change password (accounts made with Google see **Set a password** instead, with no current password needed), and reminder days and time for each favourite. Due reminders show in the navbar bell while the app is open; no email or push notifications are sent.
 
 To try favourites, reporting and the profile page, log in as **demo@example.com** / **Hawker#Run1** (set `SEED_DEMO_PASSWORD` in `backend/.env` to change it before seeding). It starts with two favourites and a weekday reminder. **demo2fa@example.com** (same password) has two-factor login on: add the key `HAWKERWATCHDEMO2` to an authenticator app to get its codes. The other seeded users can't log in. Accounts you register yourself last until the next `pnpm seed`.
 
@@ -138,9 +140,10 @@ With `pnpm dev` running, open **http://localhost:5173/api/docs** for an interact
 | GET | `/api/health` | |
 | POST | `/api/auth/register` | `{ name, email, password }`; password needs 8 to 72 characters, a capital letter and a special character; sets the login cookie |
 | POST | `/api/auth/login` | `{ email, password }`; sets the login cookie. After 10 failed attempts from one IP in 15 minutes, returns 429 until the window ends |
+| POST | `/api/auth/google` | `{ credential }` (the ID token from Google's button); logs into the account with that Google id or the same verified email, or creates one without a password; sets the login cookie. Accounts with two-factor login get `{ twoFactorRequired, challengeToken }` as with `/login`. Failed attempts count towards the same limit |
 | GET | `/api/auth/me` | Current user; 401 when logged out |
 | PATCH | `/api/auth/me` | `{ name }`; login required |
-| PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required; same rules as register for the new password |
+| PATCH | `/api/auth/password` | `{ currentPassword, newPassword }`; login required; same rules as register for the new password. Accounts without a password (`hasPassword: false`, made with Google) leave out `currentPassword` to set one |
 | POST | `/api/auth/logout` | Clears the login cookie |
 | GET | `/api/hawker-centres` | Optional `search`, and `lat` + `lng` + `radius` (metres, default 2000) for nearest first; each centre has `stallCount` (stalls listed now); plus `cuisines` (categories of the listed stalls) and `live` (`{ stallsReported, latestStatus, latestReportAt }` from live reports, or `null`) |
 | GET | `/api/hawker-centres/:id` | Includes official `closures` and `stallCount` |

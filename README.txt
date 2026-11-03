@@ -45,6 +45,7 @@ Test account (on the deployed app):
     Display name:  HawkerWatch Demo
 
 You can also register your own account: click Log in, then Create an account.
+Or click Continue with Google on the Log in page to log in with a Google account.
 
 Note: this account only exists in the deployed database. On your own local copy, register
 a new account (see section 2, step 7).
@@ -179,10 +180,15 @@ Step 5: Create backend/.env
                                  Default 100
         REPORT_RATE_LIMIT_MAX    Community reports per IP in 15 minutes. Default 10
         STALL_RATE_LIMIT_MAX     Stalls added per IP in 15 minutes. Default 10
+        GOOGLE_CLIENT_ID         Google OAuth client ID for Continue with Google.
+                                 Default: the team's ID, built into
+                                 backend/utils/googleAuth.js. Only set it to use
+                                 your own (see section 6.4).
 
-    The frontend needs no .env file for local use. frontend/.env.example has one optional
-    variable, VITE_API_URL, which is only used when the API is on another server (see
-    section 6). Do not set it locally.
+    The frontend needs no .env file for local use. frontend/.env.example has two optional
+    variables. VITE_API_URL is only used when the API is on another server (see
+    section 6); do not set it locally. VITE_GOOGLE_CLIENT_ID replaces the built-in Google
+    client ID, and must match GOOGLE_CLIENT_ID in backend/.env (see section 6.4).
 
 Step 6: Load the data
 
@@ -362,6 +368,7 @@ What each suite tests:
     favourites.test.js             15   Favourites list, add, reminder, delete
     foodUpdates.test.js            11   Food updates: expiry, submit checks, flagging
     geocode.test.js                 4   Postal code and place search
+    googleLogin.test.js            11   Google login, setting a first password
     hawkerApi.test.js              12   Centre and stall API
     hawkerImport.test.js            9   NEA data import
     hawkerUtils.test.js             5   Search helpers, live reports
@@ -377,7 +384,7 @@ What each suite tests:
     stalls.test.js                 19   Adding, editing and removing stalls
     twoFactor.test.js              10   Two-factor login
     --------------------------  -----
-    Total                         220
+    Total                         231
 
 4.4 Frontend unit / component tests (frontend/src/**/__tests__/)
 
@@ -560,6 +567,24 @@ themselves on every push to main.
     Redirects/Rewrites (needed so that reloading a page like /map works):
 
         Source: /*     Destination: /index.html     Action: Rewrite
+
+6.4 Google login
+
+    Continue with Google uses the team's OAuth client ID, which is built into
+    frontend/src/utils/googleSignIn.js and backend/utils/googleAuth.js. A client ID is
+    public (anyone can see it in the page), so it is in the repo; there is no client
+    secret. No Render environment variable is needed for it.
+
+    Google only shows the button on sites listed in Google Cloud Console > APIs &
+    Services > Credentials > the OAuth client ID > Authorised JavaScript origins:
+
+        http://localhost:5173
+        http://localhost
+        https://hawkerwatch-1ahh.onrender.com      (no / at the end)
+
+    To use your own instead: create an OAuth client ID (Web application) with your
+    origins, then set GOOGLE_CLIENT_ID on the backend and VITE_GOOGLE_CLIENT_ID on the
+    frontend (rebuild the Static Site, because Vite builds it into the page).
 
 
 ================================================================================
