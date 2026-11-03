@@ -16,7 +16,8 @@ export function errorHandler(err, _req, res, _next) {
     message = `Invalid ${err.path}`
   } else if (err.code === 11000) {
     status = 409
-    message = `Duplicate value for ${Object.keys(err.keyValue || {}).join(', ') || 'a unique field'}`
+    const fields = Object.keys(err.keyValue || {}).join(', ')
+    message = `Duplicate value for ${fields || 'a unique field'}`
   } else if (err.name === 'MulterError') {
     // Upload problems found by multer (routes/reviewRoutes.js), e.g. a photo that is too big
     status = 400
