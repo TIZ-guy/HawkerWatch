@@ -16,7 +16,7 @@ comments.
 
 Contents
 
-    1. Links and test account
+    1. Links and test accounts
     2. Set up the app on your computer
     3. How to run
     4. Testing
@@ -27,7 +27,7 @@ Contents
 
 
 ================================================================================
-1. LINKS AND TEST ACCOUNT
+1. LINKS AND TEST ACCOUNTS
 ================================================================================
 
 Deployed app:  https://hawkerwatch-1ahh.onrender.com
@@ -40,15 +40,42 @@ it is fast.
 
 Test account (on the deployed app):
 
-    Email:         demo@hawkerwatch.test
-    Password:      Demouser#2026
-    Display name:  HawkerWatch Demo
+    Email:         demo@example.com
+    Password:      Hawker#Run1
+    Display name:  Demo User
 
 You can also register your own account: click Log in, then Create an account.
 Or click Continue with Google on the Log in page to log in with a Google account.
 
-Note: this account only exists in the deployed database. On your own local copy, register
-a new account (see section 2, step 7).
+Admin account (on the deployed app):
+
+    Email:         admin@hawkerwatch.sg
+    Password:      Hw#ytQDewYAc1nmxbJx!A
+
+Log in with it, then click Admin in the top bar (or go to /admin). Only admins see this
+page; the server also checks the role on every admin request. The admin page has:
+
+    Overview         Counts of stalls waiting for approval, listed and removed stalls,
+                     live and flagged reports and food updates, users and banned users.
+    Stall approvals  A stall added by a user stays hidden until an admin approves it.
+                     Approve lists it on its centre page; Reject deletes it.
+    Stalls           Search listed and removed stalls. Remove takes a stall off the site
+                     (its reviews are kept); Restore brings it back.
+    Moderation       Every report, food update, review and comment, newest first. Show
+                     only the ones diners flagged as wrong, and delete any post.
+    Users            Search users and see how much each has posted. Make someone an admin
+                     or remove the role. Ban a user for 1 to 365 days or permanently, with
+                     a reason (they can still log in and read, but cannot post); lift a ban.
+                     Admins cannot be banned until their admin role is removed.
+    Activity log     Every admin action above: who did it, what, and when.
+    NEA data         When the hawker centres and closures were last imported. Import now
+                     refreshes them from data.gov.sg instead of waiting for the weekly refresh.
+
+To have something on every tab, the team fills the deployed database with demo activity
+before presenting (see section 6.5).
+
+Note: these accounts are in the deployed database. On your own local copy, register a new
+account, or create the same demo login with pnpm seed:demo (see section 2, step 7).
 
 
 ================================================================================
@@ -220,16 +247,25 @@ Step 6: Load the data
 Step 7: Create an account
 
     Start the app (section 3), open http://localhost:5173, click Log in, then Create an
-    account. The deployed test account in section 1 does not exist in your local database.
+    account.
 
-    Optional: pnpm seed:demo adds fresh live reports, today's food updates and the
-    sample reviews without deleting anything, recent centre comments, 3 stalls
-    waiting for an admin to approve them, a user suspended for spam and past
-    entries in the admin activity log, plus two logins if they are missing:
+    Optional: pnpm seed:demo adds demo activity without deleting anything: fresh live
+    reports, today's food updates, recent centre comments, the sample reviews, 3 stalls
+    waiting for an admin to approve them, a user suspended for spam and past entries in
+    the admin activity log. It also adds two logins if they are missing:
     demo@example.com and demo2fa@example.com, both with password Hawker#Run1. The
     second has two-factor login on: in an authenticator app, choose Enter a setup key
     and enter HAWKERWATCHDEMO2. Reports expire after 60 minutes, so run it shortly
     before trying the app.
+
+    Optional: to try the admin page locally, create an admin login:
+
+        pnpm seed:admin
+
+    This creates admin@hawkerwatch.sg with the password HawkerAdmin#2026 (or makes an
+    existing account with that email an admin and resets its password). That default
+    password is public in this repository, so only use it on your own database. To
+    choose your own, set ADMIN_EMAIL and ADMIN_PASSWORD in backend/.env first.
 
 
 ================================================================================
@@ -595,6 +631,30 @@ themselves on every push to main.
     origins, then set GOOGLE_CLIENT_ID on the backend and VITE_GOOGLE_CLIENT_ID on the
     frontend (rebuild the Static Site, because Vite builds it into the page).
 
+6.5 Demo data on the live site
+
+    Run from our own computer, with MONGO_URI in backend/.env pointing at the Atlas
+    cluster. MONGO_DB_NAME picks the shared database the deployed site uses.
+
+    Before a demo (within 30 minutes, as reports expire after 60), in PowerShell:
+
+        $env:MONGO_DB_NAME='hawker-watch'; pnpm seed:demo; Remove-Item Env:MONGO_DB_NAME
+
+    On macOS or Linux:
+
+        MONGO_DB_NAME=hawker-watch pnpm seed:demo
+
+    It deletes nothing that users posted. It adds fresh live reports and food updates,
+    comments, sample reviews, and for the admin page: 3 stalls waiting for approval, a
+    flagged report and food update, a user suspended for spam, and past activity log
+    entries. Running it again puts the 3 stall requests back in the queue, so it can be
+    used to reset after a rehearsal.
+
+    The live admin login was made once with pnpm seed:admin, with ADMIN_PASSWORD set
+    only in the terminal, not in backend/.env:
+
+        $env:MONGO_DB_NAME='hawker-watch'; $env:ADMIN_PASSWORD='<password>'; pnpm seed:admin; Remove-Item Env:MONGO_DB_NAME, Env:ADMIN_PASSWORD
+
 
 ================================================================================
 7. KNOWN LIMITATIONS
@@ -630,3 +690,9 @@ Parts that relied on AI:
   edited ourselves.
 - Styling: the Bootstrap card grid layout for the centre cards
   (fix/centre-card-style).
+- Stall data: there is no public API for hawker stalls, so most of the ~1,400
+  stalls in backend/data/stalls.json are simulated. AI generated these sample
+  stalls (made-up names, unit numbers and dishes) for centres with no published
+  stall list; they are not real businesses. Stalls for 28 well-known centres
+  come from published food guides instead. Users can add real stalls in the app,
+  and an admin approves them before they appear.
