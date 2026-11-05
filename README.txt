@@ -262,15 +262,15 @@ section 5).
 4. TESTING
 ================================================================================
 
-We have 358 automated tests in three suites.
+We have 407 automated tests in three suites.
 
     Suite                       Tool                         Files   Tests   Needs MongoDB?
     --------------------------  ---------------------------  -----   -----   --------------
-    Backend API / integration   node:test (built into Node)     22     220   No
+    Backend API / integration   node:test (built into Node)     24     266   No
     Frontend unit / component   Vitest, Vue Test Utils, jsdom   14     115   No
-    End-to-end (E2E)            Playwright, Chromium             7      23   Yes
+    End-to-end (E2E)            Playwright, Chromium             8      26   Yes
     --------------------------  ---------------------------  -----   -----   --------------
-    Total                                                       43     358
+    Total                                                       46     407
 
 What each suite tests:
 
@@ -319,21 +319,23 @@ What each suite tests:
     - No internet is needed apart from reaching your database. The NEA import is turned
       off and outside requests (map tiles, fonts) are blocked during the tests.
 
-4.2 E2E tests (frontend/e2e/): the 7 user journeys
+4.2 E2E tests (frontend/e2e/): the 8 user journeys
 
-    auth.spec.js - Journey 1: register, log in, log out (4 tests)
+    auth.spec.js - Journey 1: register, log in and log out (4 tests)
       - A new user can register, log out and log back in
       - A wrong password is refused
       - An email that already has an account cannot register again
       - A logged-out visitor is sent to log in and returned afterwards
 
-    home-search.spec.js - Journey 2: search and filter hawker centres (6 tests)
+    home-search.spec.js - Journey 2: search and filter hawker centres (7 tests)
       - Searching by name or address narrows the list
       - Searching for a dish finds the stall that sells it
       - A search with no matches shows a message and can be cleared
       - Open today hides a centre that is closed today
       - Has live updates shows only centres with a live report
       - A cuisine chip shows only centres with that cuisine
+      Journey 2b: stall results nearest first
+      - Stalls at the closest centre come first, and A to Z sorts by name
 
     hawker-centre.spec.js - Journey 3: open a hawker centre page (3 tests)
       - A centre page shows its details, stalls and live status
@@ -354,15 +356,20 @@ What each suite tests:
       - The map shows a marker for every centre and a centre can be selected
 
     add-stall.spec.js - Journey 7: add a stall to a hawker centre (3 tests)
-      - A new stall appears in the list and stays after a reload
-      - The same stall name cannot be added twice
+      - A new stall is sent for approval instead of appearing straight away
+      - The same stall name cannot be added twice, even while the first waits for approval
       - A logged-out visitor is sent to log in first
+
+    admin.spec.js - Journey 8: admin page (2 tests)
+      - Approve, moderate, suspend, and see it all in the activity log
+      - Action buttons line up on every row, however long the details are
 
 4.3 Backend API / integration tests (backend/tests/)
 
     File                        Tests   What it covers
     --------------------------  -----   ------------------------------------------------
-    auth.test.js                   29   Tokens, register, login, account changes
+    admin.test.js                  28   Stall approval, bans, moderation, activity log
+    auth.test.js                   36   Tokens, register, login, account changes
     comments.test.js               14   Centre comments
     db.test.js                      1   Choosing the database name
     e2eGuard.test.js                1   Guard only accepts the E2E database
@@ -386,7 +393,7 @@ What each suite tests:
     stalls.test.js                 19   Adding, editing and removing stalls
     twoFactor.test.js              10   Two-factor login
     --------------------------  -----
-    Total                         231
+    Total                         266
 
 4.4 Frontend unit / component tests (frontend/src/**/__tests__/)
 
@@ -608,4 +615,18 @@ themselves on every push to main.
 8. AI USAGE
 ================================================================================
 
-AI tools were used to help brainstorm ideas for this project.
+We used AI tools (Claude) as an assistant for lower-order
+tasks allowed by the course guidelines. Every AI-generated change was reviewed,
+tested and adjusted by the team before it was merged into main. 
+
+Parts that relied on AI:
+- Test code: the favourites API tests and most of the Playwright end-to-end
+  tests, including the data-testid selectors they use. We decided which user
+  journeys to cover, reviewed the tests and ran them until they passed locally
+  and in CI.
+- CI and deployment config: the E2E job in the GitHub Actions workflow and the
+  deployment config files, plus help working out the Render settings.
+- Documentation: the first draft of this README, which we then checked and
+  edited ourselves.
+- Styling: the Bootstrap card grid layout for the centre cards
+  (fix/centre-card-style).
